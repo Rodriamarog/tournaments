@@ -7,16 +7,13 @@
 
 #include <string>
 
-#include "cms/QueueMessageProducer.hpp"
 #include "delegate/ITournamentDelegate.hpp"
-#include "persistence/repository/IRepository.hpp"
+#include "persistence/repository/TournamentRepository.hpp"
 
-class TournamentDelegate : public ITournamentDelegate{
-    std::shared_ptr<IRepository<domain::Tournament, std::string>> tournamentRepository;
-    std::shared_ptr<QueueMessageProducer> producer;
+class TournamentDelegate final : public ITournamentDelegate {
+    std::shared_ptr<TournamentRepository> tournamentRepository;
 public:
-    explicit TournamentDelegate(std::shared_ptr<IRepository<domain::Tournament, std::string>> repository, std::shared_ptr<QueueMessageProducer> producer);
-
+    explicit TournamentDelegate(const std::shared_ptr<TournamentRepository>& repository);
     std::string CreateTournament(std::shared_ptr<domain::Tournament> tournament) override;
     std::vector<std::shared_ptr<domain::Tournament>> ReadAll() override;
 };

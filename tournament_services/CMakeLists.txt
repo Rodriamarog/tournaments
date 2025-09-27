@@ -30,7 +30,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         asio::asio
         nlohmann_json::nlohmann_json
         libpqxx::pqxx
-        unofficial::activemq-cpp::activemq-cpp
         tournament_common)
 
 target_include_directories(${PROJECT_NAME} INTERFACE ${HYPODERMIC_INCLUDE_DIRS})
