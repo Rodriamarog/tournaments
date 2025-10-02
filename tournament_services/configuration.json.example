@@ -1,0 +1,11 @@
+{
+    "runConfig" : {
+        "port" : 8080,
+        "concurrency" : 4
+    },
+    "databaseConfig" : {
+        "provider" : "postgres",
+        "poolSize": 2,
+        "connectionString" : "postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_ID.supabase.co:5432/postgres"
+    }
+}

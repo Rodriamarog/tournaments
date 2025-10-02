@@ -6,3 +6,7 @@
 /Testing/
 /CMakePresets.json
 /out/
+/build/
+.env
+tournament_services/configuration.json
+tournament_consumer/configuration.json
