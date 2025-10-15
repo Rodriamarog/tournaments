@@ -2,15 +2,25 @@
 #define DOMAIN_UTILITIES_HPP
 
 #include <nlohmann/json.hpp>
+#include <regex>
 #include "domain/Team.hpp"
 #include "domain/Tournament.hpp"
 #include "domain/Group.hpp"
 #include "domain/Match.hpp"
 
 namespace domain {
+    // Regex for validating ID format
+    static const std::regex ID_VALUE("[A-Za-z0-9\\-]+");
 
     inline void to_json(nlohmann::json& json, const Team& team) {
         json = {{"id", team.Id}, {"name", team.Name}};
+    }
+
+    inline void to_json(nlohmann::json& json, const std::vector<Team>& teams) {
+        json = nlohmann::json::array();
+        for (const auto& team : teams) {
+            json.push_back({{"id", team.Id}, {"name", team.Name}});
+        }
     }
 
     inline void from_json(const nlohmann::json& json, Team& team) {
@@ -116,7 +126,9 @@ namespace domain {
             group.TournamentId() = json["tournamentId"].get<std::string>();
         }
         json["name"].get_to(group.Name());
-        json["teams"].get_to(group.Teams());
+        if(json.contains("teams")) {
+            json["teams"].get_to(group.Teams());
+        }
     }
 
     inline void to_json(nlohmann::json& json, const std::shared_ptr<Group>& group) {

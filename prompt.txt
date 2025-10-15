@@ -1,0 +1,26 @@
+Necesito hacer un proyecto de "Tournaments" en C++ para una clase de computo paralelo.
+
+
+El tipo especifico de sistema de torneo que tenemos que implementar es el de 'round robin', en el cual hay 16 equipos al inicio. Cada uno juega 1 vez contra cada uno de los demas equipos y acumula puntos dependiendo si gana, empata o pierde. Los 8 equipos con mas puntos pasan a la fase de grupos donde hay cuartos de final, semifinal y final.
+
+
+Originalmente, el proyecto estaba pensado para hacerse con dos contenedores; uno con la logica del torneo y el codigo de C++ y el api con Crow etc, y otro contenedor con la base de datos en postgres.
+
+
+Ahora, solo usaremos 1 contenedor, el contenedor con la logica del programa (que creo que ya existe, por favor revisa los contenedores existentes), y queremos mejor ahora usar una base de datos en Supabase. Y ese es el siguiente paso, queremos conectar el contenedor con la base de datos de Supabase, y confirmar que hay comunicacion entre ellos. 
+
+
+Eventualmente se hare un CI/CD con jenkins, y el contenedor vivira en algun servidor de nube ya sea en AWS, Azure, etc.
+
+
+Lo primero que quiero que hagas es analizar el codebase, quiero que me des un resumen de lo que hay, si el codigo se ve bien. Y quiero que revises si hay implementacion para tener coneccion con una BD de postgres local o en otro contenedor, ya que esto lo tenemos que adaptar para que funcione con Supabase. 
+
+
+Otros requerimientos muy importantes, es que el proyecto debe:
+
+- Ser un proyecto programado con programacion orientada a objetos
+
+- Desarrollado con 'test driven development'. Es decir, cada modulo y cosa importante debe tener tests.
+
+
+Por ahora, solo quiero que revises el codebase y busques lo que ya hay en el contenedor y dime tus opiniones. Posteriormente podemos pensar en como crear y conectar la BD de supabase.

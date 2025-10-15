@@ -1,0 +1,50 @@
+FROM ubuntu:22.04
+
+# Prevent interactive prompts during apt install
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install development tools and dependencies
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    && add-apt-repository ppa:ubuntu-toolchain-r/test -y \
+    && apt-get update \
+    && apt-get install -y \
+    gcc-13 \
+    g++-13 \
+    cmake \
+    git \
+    curl \
+    zip \
+    unzip \
+    tar \
+    pkg-config \
+    bison \
+    flex \
+    autoconf \
+    automake \
+    libtool \
+    ninja-build \
+    python3 \
+    python3-pip \
+    wget \
+    ca-certificates \
+    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 \
+    && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install vcpkg
+RUN git clone https://github.com/Microsoft/vcpkg.git /vcpkg
+RUN /vcpkg/bootstrap-vcpkg.sh
+RUN /vcpkg/vcpkg integrate install
+
+# Pre-install vcpkg dependencies to speed up builds
+# This caches all the packages in the Docker image
+RUN /vcpkg/vcpkg install crow hypodermic libpqxx gtest nlohmann-json
+
+# Set environment variables
+ENV VCPKG_ROOT=/vcpkg
+ENV PATH="$VCPKG_ROOT:$PATH"
+
+WORKDIR /workspace
+
+CMD ["/bin/bash"]

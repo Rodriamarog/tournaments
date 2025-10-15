@@ -1,6 +1,7 @@
 
 #include "include/configuration/ContainerSetup.hpp"
 #include "include/configuration/RunConfiguration.hpp"
+#include "include/configuration/RouteDefinition.hpp"
 
 int main() {
     const auto container = config::containerSetup();

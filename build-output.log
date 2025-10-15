@@ -1,0 +1,745 @@
+==========================================
+🏗️  Tournament API - Build & Test Script
+==========================================
+
+📦 Step 1/4: Building Docker image...
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.build
+#1 transferring dockerfile: 1.26kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/ubuntu:22.04
+#2 DONE 0.3s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/7] FROM docker.io/library/ubuntu:22.04@sha256:09506232a8004baa32c47d68f1e5c307d648fdd59f5e7eaa42aaf87914100db3
+#4 DONE 0.0s
+
+#5 [6/7] RUN /vcpkg/vcpkg install crow hypodermic libpqxx gtest nlohmann-json
+#5 CACHED
+
+#6 [5/7] RUN /vcpkg/vcpkg integrate install
+#6 CACHED
+
+#7 [3/7] RUN git clone https://github.com/Microsoft/vcpkg.git /vcpkg
+#7 CACHED
+
+#8 [2/7] RUN apt-get update && apt-get install -y     software-properties-common     && add-apt-repository ppa:ubuntu-toolchain-r/test -y     && apt-get update     && apt-get install -y     gcc-13     g++-13     cmake     git     curl     zip     unzip     tar     pkg-config     bison     flex     autoconf     automake     libtool     ninja-build     python3     python3-pip     wget     ca-certificates     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100     && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100     && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+
+#9 [4/7] RUN /vcpkg/bootstrap-vcpkg.sh
+#9 CACHED
+
+#10 [7/7] WORKDIR /workspace
+#10 CACHED
+
+#11 exporting to image
+#11 exporting layers done
+#11 writing image sha256:e92aee3b4916ace0d98699d44a76fb0be4e6cf0b8ff9ee22e52733fad988e740 done
+#11 naming to docker.io/library/tournament-build done
+#11 DONE 0.0s
+✅ Docker image built successfully
+
+🧹 Step 2/4: Cleaning old build artifacts...
+✅ Build directory cleaned
+
+🔨 Step 3/4: Building project (this may take a few minutes)...
+-- Running vcpkg install
+Detecting compiler hash for triplet x64-linux...
+Compiler found: /usr/bin/c++
+The following packages will be built and installed:
+  * asio:x64-linux@1.32.0
+  * boost-algorithm:x64-linux@1.89.0
+  * boost-array:x64-linux@1.89.0
+  * boost-assert:x64-linux@1.89.0
+  * boost-bind:x64-linux@1.89.0
+  * boost-cmake:x64-linux@1.89.0
+  * boost-concept-check:x64-linux@1.89.0
+  * boost-config:x64-linux@1.89.0
+  * boost-container-hash:x64-linux@1.89.0
+  * boost-conversion:x64-linux@1.89.0
+  * boost-core:x64-linux@1.89.0
+  * boost-describe:x64-linux@1.89.0
+  * boost-detail:x64-linux@1.89.0
+  * boost-exception:x64-linux@1.89.0
+  * boost-format:x64-linux@1.89.0
+  * boost-function:x64-linux@1.89.0
+  * boost-function-types:x64-linux@1.89.0
+  * boost-functional:x64-linux@1.89.0
+  * boost-fusion:x64-linux@1.89.0
+  * boost-headers:x64-linux@1.89.0
+  * boost-integer:x64-linux@1.89.0
+  * boost-io:x64-linux@1.89.0
+  * boost-iterator:x64-linux@1.89.0
+  * boost-move:x64-linux@1.89.0
+  * boost-mp11:x64-linux@1.89.0
+  * boost-mpl:x64-linux@1.89.0
+  * boost-numeric-conversion:x64-linux@1.89.0
+  * boost-optional:x64-linux@1.89.0
+  * boost-parameter:x64-linux@1.89.0
+  * boost-predef:x64-linux@1.89.0
+  * boost-preprocessor:x64-linux@1.89.0
+  * boost-range:x64-linux@1.89.0
+  * boost-regex:x64-linux@1.89.0
+  * boost-signals2:x64-linux@1.89.0
+  * boost-smart-ptr:x64-linux@1.89.0
+  * boost-static-assert:x64-linux@1.89.0
+  * boost-system:x64-linux@1.89.0
+  * boost-test:x64-linux@1.89.0
+  * boost-throw-exception:x64-linux@1.89.0
+  * boost-tuple:x64-linux@1.89.0
+  * boost-type-index:x64-linux@1.89.0
+  * boost-type-traits:x64-linux@1.89.0
+  * boost-typeof:x64-linux@1.89.0
+  * boost-uninstall:x64-linux@1.89.0
+  * boost-unordered:x64-linux@1.89.0
+  * boost-utility:x64-linux@1.89.0
+  * boost-variant:x64-linux@1.89.0
+  * boost-variant2:x64-linux@1.89.0
+  * boost-winapi:x64-linux@1.89.0
+    crow:x64-linux@1.2.1.2
+    gtest:x64-linux@1.17.0#2
+    hypodermic:x64-linux@2023-03-03
+  * libpq[core,lz4,openssl,zlib]:x64-linux@16.9#1
+    libpqxx:x64-linux@7.10.1
+  * lz4:x64-linux@1.10.0
+    nlohmann-json:x64-linux@3.12.0#1
+  * openssl:x64-linux@3.6.0#1
+  * vcpkg-boost:x64-linux@2025-03-29
+  * vcpkg-cmake:x64-linux@2024-04-23
+  * vcpkg-cmake-config:x64-linux@2024-05-23
+  * vcpkg-cmake-get-vars:x64-linux@2025-05-29
+  * zlib:x64-linux@1.3.1
+Additional packages (*) will be modified to complete this operation.
+Restored 62 package(s) from /root/.cache/vcpkg/archives in 763 ms. Use --debug to see more details.
+Installing 1/62 vcpkg-cmake-config:x64-linux@2024-05-23...
+Elapsed time to handle vcpkg-cmake-config:x64-linux: 1.31 ms
+vcpkg-cmake-config:x64-linux package ABI: 69e2ae94cec5dfbcf5016df1274a8abd8c9d1ddfb80a7582021dfeccd03f044d
+Installing 2/62 vcpkg-cmake:x64-linux@2024-04-23...
+Elapsed time to handle vcpkg-cmake:x64-linux: 1.43 ms
+vcpkg-cmake:x64-linux package ABI: dc9f186cc1a823361c1c20799914c253e67a9b8ca274307bc72b526dd6b76dd4
+Installing 3/62 asio:x64-linux@1.32.0...
+Elapsed time to handle asio:x64-linux: 83.1 ms
+asio:x64-linux package ABI: 54d599cb0efa585ea82c99b7730bef8d5558511714aa93a910c9f931d09297c9
+Installing 4/62 crow:x64-linux@1.2.1.2...
+Elapsed time to handle crow:x64-linux: 6 ms
+crow:x64-linux package ABI: 6a20e50d041d7a599748daebb2fe550ea7a6f9bd3f12286effbf972d2c5bd3a5
+Installing 5/62 gtest:x64-linux@1.17.0#2...
+Elapsed time to handle gtest:x64-linux: 23.8 ms
+gtest:x64-linux package ABI: 30c2a23ce14e328658ddeb2169965c6d902e299bbc927a786527ec32e715a7c2
+Installing 6/62 vcpkg-boost:x64-linux@2025-03-29...
+Elapsed time to handle vcpkg-boost:x64-linux: 1.97 ms
+vcpkg-boost:x64-linux package ABI: c7747228ed5849cb6c52daaa222ad3f6b70ad3117c4ca230001bed32fb98f993
+Installing 7/62 boost-uninstall:x64-linux@1.89.0...
+Elapsed time to handle boost-uninstall:x64-linux: 1.65 ms
+boost-uninstall:x64-linux package ABI: 7aadf786b26e37f847429eedc7c79db540e0b2ed6d4afc368cf41448bd756b06
+Installing 8/62 boost-cmake:x64-linux@1.89.0...
+Elapsed time to handle boost-cmake:x64-linux: 2.71 ms
+boost-cmake:x64-linux package ABI: 486a9b69d24617dddc4c28a3815a4d9ff07f4aab421e7dea55bb7d20d9ada633
+Installing 9/62 boost-headers:x64-linux@1.89.0...
+Elapsed time to handle boost-headers:x64-linux: 2.1 ms
+boost-headers:x64-linux package ABI: 83de1276a830e20d6471443b53d97e33fafff94e13bf3b3e5a163dadc9b36341
+Installing 10/62 boost-config:x64-linux@1.89.0...
+Elapsed time to handle boost-config:x64-linux: 32.4 ms
+boost-config:x64-linux package ABI: 1ebea4ca31dd4dc47e2f892f0d0a37d3e60276b02c854dc8896f37fa4d9b97aa
+Installing 11/62 boost-static-assert:x64-linux@1.89.0...
+Elapsed time to handle boost-static-assert:x64-linux: 2.74 ms
+boost-static-assert:x64-linux package ABI: c2d74956e4e113f51b56cfd9ec3ce490ae431461d7e6dfffca7702387e1cff6b
+Installing 12/62 boost-type-traits:x64-linux@1.89.0...
+Elapsed time to handle boost-type-traits:x64-linux: 24.6 ms
+boost-type-traits:x64-linux package ABI: cea45d0c94c4536a2c56bf07f98fe79dbfb6fc1f450009f43b02c2dfb0c0d4cc
+Installing 13/62 boost-assert:x64-linux@1.89.0...
+Elapsed time to handle boost-assert:x64-linux: 3.11 ms
+boost-assert:x64-linux package ABI: 622bd489c32f3c46e380543450c88a039e601a5d862630aedc13b486e8aada0c
+Installing 14/62 boost-throw-exception:x64-linux@1.89.0...
+Elapsed time to handle boost-throw-exception:x64-linux: 2.9 ms
+boost-throw-exception:x64-linux package ABI: 50ead1493a4797674b629481013acb6bcddeb586ed50145fac764372f633ed2d
+Installing 15/62 boost-preprocessor:x64-linux@1.89.0...
+Elapsed time to handle boost-preprocessor:x64-linux: 57.1 ms
+boost-preprocessor:x64-linux package ABI: 991d46ac2d8bddb7d46d7b82c5349702da6ee666fac43b2f6c324f067db3ad1b
+Installing 16/62 boost-io:x64-linux@1.89.0...
+Elapsed time to handle boost-io:x64-linux: 4.77 ms
+boost-io:x64-linux package ABI: 0e5e0a1049e9ab5e42919aaa8d4e57a15395b56fb40edc653555a8a0e49d1e87
+Installing 17/62 boost-core:x64-linux@1.89.0...
+Elapsed time to handle boost-core:x64-linux: 11.9 ms
+boost-core:x64-linux package ABI: a0c51ac762a68bd7d8e41adf5feeb2fa9599793fcd07021655292e4732002909
+Installing 18/62 boost-utility:x64-linux@1.89.0...
+Elapsed time to handle boost-utility:x64-linux: 6.74 ms
+boost-utility:x64-linux package ABI: c6816ee448bf98209c51f8801d90643d04bc7887a489f941fd76ac446c9d99d5
+Installing 19/62 boost-smart-ptr:x64-linux@1.89.0...
+Elapsed time to handle boost-smart-ptr:x64-linux: 14.4 ms
+boost-smart-ptr:x64-linux package ABI: 06b94cac94e3e407c00afd8ce7ac7047862aadc9d8ab09206b6d43300ccc4da6
+Installing 20/62 boost-optional:x64-linux@1.89.0...
+Elapsed time to handle boost-optional:x64-linux: 6.56 ms
+boost-optional:x64-linux package ABI: 9aed504238fdc704fb5d3ce85531008a549470341fb45447ababdad36b3df405
+Installing 21/62 boost-predef:x64-linux@1.89.0...
+Elapsed time to handle boost-predef:x64-linux: 19.2 ms
+boost-predef:x64-linux package ABI: e7cbd95ed83a42ece109062414ef8cc9d018a14c96bf6e134c1e2d97a84d643d
+Installing 22/62 boost-mpl:x64-linux@1.89.0...
+Elapsed time to handle boost-mpl:x64-linux: 113 ms
+boost-mpl:x64-linux package ABI: c00071a42ceec42dae19c92af56f15257b1bf48182a29e74dc9c36a1ead417c1
+Installing 23/62 boost-conversion:x64-linux@1.89.0...
+Elapsed time to handle boost-conversion:x64-linux: 6.29 ms
+boost-conversion:x64-linux package ABI: fdeeacee7d73802fd5c389a603b06b0fef5354f3b3b1d0a6a2c8dc39ac3ad1d8
+Installing 24/62 boost-numeric-conversion:x64-linux@1.89.0...
+Elapsed time to handle boost-numeric-conversion:x64-linux: 9.01 ms
+boost-numeric-conversion:x64-linux package ABI: 2424418d74e8e8139d2b1b971f8a3b8832777cc567228c95f15dd892efff31ff
+Installing 25/62 boost-mp11:x64-linux@1.89.0...
+Elapsed time to handle boost-mp11:x64-linux: 11 ms
+boost-mp11:x64-linux package ABI: eba5d1ec734d370109fee85150fdd89356bc22b7833b324f2c1534fbd6d8d93d
+Installing 26/62 boost-typeof:x64-linux@1.89.0...
+Elapsed time to handle boost-typeof:x64-linux: 9.62 ms
+boost-typeof:x64-linux package ABI: 14a7c8a62ef6cd0e9202c41f50b1d3c756c90f340beee8176afa7bc333765a64
+Installing 27/62 boost-tuple:x64-linux@1.89.0...
+Elapsed time to handle boost-tuple:x64-linux: 8.18 ms
+boost-tuple:x64-linux package ABI: 8486441452b08aaaf3dab0fd8eb2e11fe4dd7ca4853d3d6b4a844732cfc8d17d
+Installing 28/62 boost-detail:x64-linux@1.89.0...
+Elapsed time to handle boost-detail:x64-linux: 8.42 ms
+boost-detail:x64-linux package ABI: f40f1191eadafa027a3630df104e0533e913980546a66c50edc6e40c1947a70b
+Installing 29/62 boost-function-types:x64-linux@1.89.0...
+Elapsed time to handle boost-function-types:x64-linux: 13.3 ms
+boost-function-types:x64-linux package ABI: 0174b03bc8b9999751b7858e1884c36600c28d7127ba7dde72a17abe96c43d02
+Installing 30/62 boost-bind:x64-linux@1.89.0...
+Elapsed time to handle boost-bind:x64-linux: 9.33 ms
+boost-bind:x64-linux package ABI: 0c5289fc09bfb03724fa749e37f9c9ac57cec7094008a907f8c04650dbbe3aa4
+Installing 31/62 boost-function:x64-linux@1.89.0...
+Elapsed time to handle boost-function:x64-linux: 7.84 ms
+boost-function:x64-linux package ABI: 6d4dd9a74b449a0097d25872fe56f075a90bdb9537c46d1e894029531b5767e1
+Installing 32/62 boost-functional:x64-linux@1.89.0...
+Elapsed time to handle boost-functional:x64-linux: 9.42 ms
+boost-functional:x64-linux package ABI: 2beaeef1d9f2096f87c13afda56bc3773a59b7e407d4044a46d7243a136ab9d9
+Installing 33/62 boost-describe:x64-linux@1.89.0...
+Elapsed time to handle boost-describe:x64-linux: 7.87 ms
+boost-describe:x64-linux package ABI: 627035674492cabf07383f9703f10d196aeb120f3bc96a409da7bb35623b53c3
+Installing 34/62 boost-container-hash:x64-linux@1.89.0...
+Elapsed time to handle boost-container-hash:x64-linux: 9.22 ms
+boost-container-hash:x64-linux package ABI: a2658c3af6a42c90638054324e7648ea4cdb2bf30fbcd0dce7eb9320cf9113eb
+Installing 35/62 boost-fusion:x64-linux@1.89.0...
+Elapsed time to handle boost-fusion:x64-linux: 123 ms
+boost-fusion:x64-linux package ABI: 3ea320a0004b0d6993cfcb497c13dd097267bcf1664f4f31fde144b89d5f90b5
+Installing 36/62 boost-concept-check:x64-linux@1.89.0...
+Elapsed time to handle boost-concept-check:x64-linux: 11.4 ms
+boost-concept-check:x64-linux package ABI: bf3e2dd52b4fc225b92bbc0b08a205c013cdc3ac8cc49279d5ff71eceedffa07
+Installing 37/62 boost-iterator:x64-linux@1.89.0...
+Elapsed time to handle boost-iterator:x64-linux: 13.5 ms
+boost-iterator:x64-linux package ABI: 44f3adbfca00cce4cb05688beaaa1cc7019a4ef662c93a212f9d8a4cdf895c13
+Installing 38/62 boost-exception:x64-linux@1.89.0...
+Elapsed time to handle boost-exception:x64-linux: 12.1 ms
+boost-exception:x64-linux package ABI: 30e294f999290d2e821308fb1360d5058ddee1d4adb6989cda972c678a90a5f3
+Installing 39/62 boost-unordered:x64-linux@1.89.0...
+Elapsed time to handle boost-unordered:x64-linux: 15.8 ms
+boost-unordered:x64-linux package ABI: b624f4af2231cb80501de87df74ac100af4f2c5cd39cdc37fb00d213cce24011
+Installing 40/62 boost-regex:x64-linux@1.89.0...
+Elapsed time to handle boost-regex:x64-linux: 15.1 ms
+boost-regex:x64-linux package ABI: 5d9cea975b0ca11e8bf47354900b2b293422ce04cc7109024c91c366d9060f46
+Installing 41/62 boost-array:x64-linux@1.89.0...
+Elapsed time to handle boost-array:x64-linux: 10.2 ms
+boost-array:x64-linux package ABI: f4b19bd3fe09c59f8a49204f46364244cfad489c09c7271d16a459d88d914fc6
+Installing 42/62 boost-range:x64-linux@1.89.0...
+Elapsed time to handle boost-range:x64-linux: 24.3 ms
+boost-range:x64-linux package ABI: 0b7f3f09654ded980bdb6271e4913db89153556c1c190a6f0c1073260c4befa0
+Installing 43/62 boost-algorithm:x64-linux@1.89.0...
+Elapsed time to handle boost-algorithm:x64-linux: 22.4 ms
+boost-algorithm:x64-linux package ABI: 5ef01abb3e9ab1d008dd3332ecae51c3002b56f297e26d0a37005171ae833417
+Installing 44/62 boost-test:x64-linux@1.89.0...
+Elapsed time to handle boost-test:x64-linux: 81.1 ms
+boost-test:x64-linux package ABI: 1833ab64e4e807fafb9b338ef7676fbbec52eda12150a8eff49f3b4c223b3333
+Installing 45/62 boost-winapi:x64-linux@1.89.0...
+Elapsed time to handle boost-winapi:x64-linux: 23 ms
+boost-winapi:x64-linux package ABI: bf4ab436d03f04585b8435d96431080883cdd7fec306b845c8cda6f13a07c2d5
+Installing 46/62 boost-variant2:x64-linux@1.89.0...
+Elapsed time to handle boost-variant2:x64-linux: 11.3 ms
+boost-variant2:x64-linux package ABI: f0636d1eec64469fa560ba9e51805522f24cf55d18f3ea5e7a97c46920b25560
+Installing 47/62 boost-system:x64-linux@1.89.0...
+Elapsed time to handle boost-system:x64-linux: 15.1 ms
+boost-system:x64-linux package ABI: 346f8248cf68c4f71b092ad6e82f1f44ae58f409daacd7515d99219d6594ead1
+Installing 48/62 boost-type-index:x64-linux@1.89.0...
+Elapsed time to handle boost-type-index:x64-linux: 11.5 ms
+boost-type-index:x64-linux package ABI: 87b70377a34a559fb8cfe653205787510eec98f29548b3807cf3ca56c427c686
+Installing 49/62 boost-integer:x64-linux@1.89.0...
+Elapsed time to handle boost-integer:x64-linux: 11.5 ms
+boost-integer:x64-linux package ABI: c9252e05ec225d589faa69bc38f670f11c478739c9dcc2a844c65a80dc49c5db
+Installing 50/62 boost-variant:x64-linux@1.89.0...
+Elapsed time to handle boost-variant:x64-linux: 14.4 ms
+boost-variant:x64-linux package ABI: 44db65bdab6a68fe6c8008c37e08d285a7d7b99600ba9f4509bfb53f6c169a23
+Installing 51/62 boost-parameter:x64-linux@1.89.0...
+Elapsed time to handle boost-parameter:x64-linux: 20.8 ms
+boost-parameter:x64-linux package ABI: a90a9c000de7a258f56707eee9a1e36f7e73c3eda7a8c72385e8f8455a3d8d04
+Installing 52/62 boost-move:x64-linux@1.89.0...
+Elapsed time to handle boost-move:x64-linux: 15.4 ms
+boost-move:x64-linux package ABI: edcbf38fcb418adb7277efc9d6f32c27debe32965e789bdf421b85faf65318cf
+Installing 53/62 boost-signals2:x64-linux@1.89.0...
+Elapsed time to handle boost-signals2:x64-linux: 14.1 ms
+boost-signals2:x64-linux package ABI: 80987e707ab3ec27d778a125124e0cb863bd86f46598bfae585d11b0821c013e
+Installing 54/62 boost-format:x64-linux@1.89.0...
+Elapsed time to handle boost-format:x64-linux: 12.5 ms
+boost-format:x64-linux package ABI: 25addeacebf95cbe6029a7ded6ce80f0d6753199fb66c9575928538f2779f1e0
+Installing 55/62 hypodermic:x64-linux@2023-03-03...
+Elapsed time to handle hypodermic:x64-linux: 20.9 ms
+hypodermic:x64-linux package ABI: 716da38889ef79324a98e30db6f8a27cbc0b7c6442820e273bd3a546e0d6ef5a
+Installing 56/62 zlib:x64-linux@1.3.1...
+Elapsed time to handle zlib:x64-linux: 10.8 ms
+zlib:x64-linux package ABI: 8e3432c06f24d5d857ea28921a2830359b64775dc4200750370dc7a8ef038562
+Installing 57/62 vcpkg-cmake-get-vars:x64-linux@2025-05-29...
+Elapsed time to handle vcpkg-cmake-get-vars:x64-linux: 11.7 ms
+vcpkg-cmake-get-vars:x64-linux package ABI: 1f5db7b354adbee790023ddee26dfbd128ce962dbf7092453aca78ab3c737006
+Installing 58/62 openssl:x64-linux@3.6.0#1...
+Elapsed time to handle openssl:x64-linux: 83.2 ms
+openssl:x64-linux package ABI: ae62baba53e16bda0046fec50b1b731a5d541b6c3229ccfc85c6de6100e94196
+Installing 59/62 lz4:x64-linux@1.10.0...
+Elapsed time to handle lz4:x64-linux: 15.1 ms
+lz4:x64-linux package ABI: 40bcc8f4b9be514e92c701ebd86db6e82c29a75dfeb4c3ec77f728de8080c918
+Installing 60/62 libpq[core,lz4,openssl,zlib]:x64-linux@16.9#1...
+Elapsed time to handle libpq:x64-linux: 109 ms
+libpq:x64-linux package ABI: dba643a5da022e214952196bb14843e0e3a43ddb28da7e520f1fdd1548e3bbc4
+Installing 61/62 libpqxx:x64-linux@7.10.1...
+Elapsed time to handle libpqxx:x64-linux: 42.7 ms
+libpqxx:x64-linux package ABI: 46568b25fb0e5f87f5b066e4921a260578f0e4dac566f2a49e39efa3afdcb352
+Installing 62/62 nlohmann-json:x64-linux@3.12.0#1...
+Elapsed time to handle nlohmann-json:x64-linux: 19.6 ms
+nlohmann-json:x64-linux package ABI: ffcff55c5cd49c721c4e1dbe71cd2ead2423fe6093978c99cc9adadcd590aaac
+Installed contents are licensed to you by owners. Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.
+Packages installed in this vcpkg installation declare the following licenses:
+Apache-2.0
+BSD-2-Clause
+BSD-3-Clause
+BSL-1.0
+MIT
+PostgreSQL
+Zlib
+crow provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(Crow CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE Crow::Crow asio::asio)
+
+The package gtest is compatible with built-in CMake targets:
+
+    enable_testing()
+    
+    find_package(GTest CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE GTest::gtest GTest::gtest_main GTest::gmock GTest::gmock_main)
+    
+    add_test(AllTestsInMain main)
+
+hypodermic is header-only and can be used from CMake via:
+
+  find_path(HYPODERMIC_INCLUDE_DIRS "Hypodermic/ActivatedRegistrationInfo.h")
+  target_include_directories(main PRIVATE ${HYPODERMIC_INCLUDE_DIRS})
+
+libpqxx provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(libpqxx CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE libpqxx::pqxx)
+
+libpqxx provides pkg-config modules:
+
+  # C++ client API for the PostgreSQL database management system.
+  libpqxx
+
+The package nlohmann-json provides CMake targets:
+
+    find_package(nlohmann_json CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE nlohmann_json::nlohmann_json)
+
+The package nlohmann-json can be configured to not provide implicit conversions via a custom triplet file:
+
+    set(nlohmann-json_IMPLICIT_CONVERSIONS OFF)
+
+For more information, see the docs here:
+    
+    https://json.nlohmann.me/api/macros/json_use_implicit_conversions/
+
+All requested installations completed successfully in: 1.3 s
+-- Running vcpkg install - done
+-- The C compiler identification is GNU 13.1.0
+-- The CXX compiler identification is GNU 13.1.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found asio: /workspace/build/vcpkg_installed/x64-linux/include  
+-- Found PostgreSQL: optimized;/workspace/build/vcpkg_installed/x64-linux/lib/libpq.a;debug;/workspace/build/vcpkg_installed/x64-linux/debug/lib/libpq.a (found version "16.9")  
+-- Found Threads: TRUE  
+-- Found OpenSSL: /workspace/build/vcpkg_installed/x64-linux/debug/lib/libcrypto.a (found version "3.6.0")  
+-- Found nlohmann_json: /workspace/build/vcpkg_installed/x64-linux/share/nlohmann_json/nlohmann_jsonConfig.cmake (found version "3.12.0") 
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /workspace/build
+[  5%] Building CXX object tournament_common/CMakeFiles/tournament_common.dir/src/persistence/repository/TournamentRepository.cpp.o
+/workspace/tournament_common/src/persistence/repository/TournamentRepository.cpp: In member function 'virtual std::string TournamentRepository::Update(const domain::Tournament&)':
+/workspace/tournament_common/src/persistence/repository/TournamentRepository.cpp:55:47: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   55 |     const pqxx::result result = tx.exec_params(
+      |                                 ~~~~~~~~~~~~~~^
+   56 |         "UPDATE tournaments SET document = $1 WHERE id = $2 RETURNING id",
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   57 |         tournamentDoc.dump(), entity.Id()
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~      
+   58 |     );
+      |     ~                                          
+In file included from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/dbtransaction.hxx:20,
+                 from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/blob.hxx:36,
+                 from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/pqxx:6,
+                 from /workspace/tournament_common/include/persistence/configuration/PostgresConnection.hpp:8,
+                 from /workspace/tournament_common/src/persistence/repository/TournamentRepository.cpp:10:
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+/workspace/tournament_common/src/persistence/repository/TournamentRepository.cpp: In member function 'virtual bool TournamentRepository::ExistsByName(const std::string&)':
+/workspace/tournament_common/src/persistence/repository/TournamentRepository.cpp:96:47: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   96 |     const pqxx::result result = tx.exec_params(
+      |                                 ~~~~~~~~~~~~~~^
+   97 |         "SELECT COUNT(*) as count FROM tournaments WHERE document->>'name' = $1", name
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   98 |     );
+      |     ~                                          
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+[ 10%] Linking CXX static library libtournament_common.a
+[ 10%] Built target tournament_common
+[ 21%] Building CXX object tournament_services/CMakeFiles/tournament_services.dir/src/delegate/TeamDelegate.cpp.o
+[ 21%] Building CXX object tournament_services/CMakeFiles/tournament_services.dir/src/delegate/TournamentDelegate.cpp.o
+[ 26%] Building CXX object tournament_services/CMakeFiles/tournament_services.dir/src/controller/TournamentController.cpp.o
+[ 31%] Building CXX object tournament_services/tests/CMakeFiles/tournament_tests_runner.dir/controller/TournamentControllerTest.cpp.o
+[ 36%] Building CXX object tournament_services/tests/CMakeFiles/tournament_tests_runner.dir/controller/TeamControllerTest.cpp.o
+[ 42%] Building CXX object tournament_services/tests/CMakeFiles/tournament_tests_runner.dir/controller/GroupControllerTest.cpp.o
+[ 47%] Building CXX object tournament_services/CMakeFiles/tournament_services.dir/main.cpp.o
+[ 52%] Building CXX object tournament_services/CMakeFiles/tournament_services.dir/src/controller/TeamController.cpp.o
+[ 57%] Building CXX object tournament_services/tests/CMakeFiles/tournament_tests_runner.dir/delegate/TeamDelegateTest.cpp.o
+In file included from /workspace/tournament_services/src/delegate/TeamDelegate.cpp:6:
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp: In member function 'virtual std::string_view TeamRepository::Update(const domain::Team&)':
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:66:45: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   66 |         pqxx::result result = tx.exec_params(
+      |                               ~~~~~~~~~~~~~~^
+   67 |             "UPDATE teams SET document = $1 WHERE id = $2 RETURNING id",
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   68 |             teamBody.dump(),
+      |             ~~~~~~~~~~~~~~~~                 
+   69 |             entity.Id
+      |             ~~~~~~~~~                        
+   70 |         );
+      |         ~                                    
+In file included from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/dbtransaction.hxx:20,
+                 from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/blob.hxx:36,
+                 from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/pqxx:6,
+                 from /workspace/tournament_common/include/persistence/configuration/PostgresConnection.hpp:8,
+                 from /workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:13:
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp: In member function 'virtual bool TeamRepository::ExistsByName(const std::string&)':
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:90:45: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   90 |         pqxx::result result = tx.exec_params(
+      |                               ~~~~~~~~~~~~~~^
+   91 |             "SELECT COUNT(*) as count FROM teams WHERE document->>'name' = $1",
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   92 |             name
+      |             ~~~~                             
+   93 |         );
+      |         ~                                    
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+In file included from /workspace/tournament_services/tests/delegate/TeamDelegateTest.cpp:6:
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp: In member function 'virtual std::string_view TeamRepository::Update(const domain::Team&)':
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:66:45: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   66 |         pqxx::result result = tx.exec_params(
+      |                               ~~~~~~~~~~~~~~^
+   67 |             "UPDATE teams SET document = $1 WHERE id = $2 RETURNING id",
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   68 |             teamBody.dump(),
+      |             ~~~~~~~~~~~~~~~~                 
+   69 |             entity.Id
+      |             ~~~~~~~~~                        
+   70 |         );
+      |         ~                                    
+In file included from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/dbtransaction.hxx:20,
+                 from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/blob.hxx:36,
+                 from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/pqxx:6,
+                 from /workspace/tournament_common/include/persistence/configuration/PostgresConnection.hpp:8,
+                 from /workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:13:
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp: In member function 'virtual bool TeamRepository::ExistsByName(const std::string&)':
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:90:45: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   90 |         pqxx::result result = tx.exec_params(
+      |                               ~~~~~~~~~~~~~~^
+   91 |             "SELECT COUNT(*) as count FROM teams WHERE document->>'name' = $1",
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   92 |             name
+      |             ~~~~                             
+   93 |         );
+      |         ~                                    
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+In file included from /workspace/tournament_services/include/configuration/ContainerSetup.hpp:14,
+                 from /workspace/tournament_services/main.cpp:2:
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp: In member function 'virtual std::string_view TeamRepository::Update(const domain::Team&)':
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:66:45: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   66 |         pqxx::result result = tx.exec_params(
+      |                               ~~~~~~~~~~~~~~^
+   67 |             "UPDATE teams SET document = $1 WHERE id = $2 RETURNING id",
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   68 |             teamBody.dump(),
+      |             ~~~~~~~~~~~~~~~~                 
+   69 |             entity.Id
+      |             ~~~~~~~~~                        
+   70 |         );
+      |         ~                                    
+In file included from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/dbtransaction.hxx:20,
+                 from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/blob.hxx:36,
+                 from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/pqxx:6,
+                 from /workspace/tournament_common/include/persistence/configuration/PostgresConnection.hpp:8,
+                 from /workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:13:
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp: In member function 'virtual bool TeamRepository::ExistsByName(const std::string&)':
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:90:45: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   90 |         pqxx::result result = tx.exec_params(
+      |                               ~~~~~~~~~~~~~~^
+   91 |             "SELECT COUNT(*) as count FROM teams WHERE document->>'name' = $1",
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   92 |             name
+      |             ~~~~                             
+   93 |         );
+      |         ~                                    
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+[ 63%] Building CXX object tournament_services/tests/CMakeFiles/tournament_tests_runner.dir/delegate/TournamentDelegateTest.cpp.o
+[ 68%] Building CXX object tournament_services/tests/CMakeFiles/tournament_tests_runner.dir/delegate/GroupDelegateTest.cpp.o
+[ 73%] Building CXX object tournament_services/tests/CMakeFiles/tournament_tests_runner.dir/__/src/controller/TeamController.cpp.o
+[ 78%] Building CXX object tournament_services/tests/CMakeFiles/tournament_tests_runner.dir/__/src/controller/TournamentController.cpp.o
+In file included from /workspace/tournament_services/tests/delegate/GroupDelegateTest.cpp:7:
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp: In member function 'virtual std::shared_ptr<domain::Group> GroupRepository::ReadById(std::string)':
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp:42:41: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   42 |     pqxx::result result = tx.exec_params(
+      |                           ~~~~~~~~~~~~~~^
+   43 |         "SELECT id, document FROM groups WHERE id = $1", id
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   44 |     );
+      |     ~                                    
+In file included from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/dbtransaction.hxx:20,
+                 from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/blob.hxx:36,
+                 from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/pqxx:6,
+                 from /workspace/tournament_common/include/persistence/configuration/PostgresConnection.hpp:8,
+                 from /workspace/tournament_common/include/persistence/repository/GroupRepository.hpp:13:
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp: In member function 'virtual std::string GroupRepository::Create(const domain::Group&)':
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp:61:32: error: conversion from 'const domain::Group' to non-scalar type 'nlohmann::json_abi_v3_12_0::json' {aka 'nlohmann::json_abi_v3_12_0::basic_json<>'} requested
+   61 |     nlohmann::json groupBody = entity;
+      |                                ^~~~~~
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp: In member function 'virtual std::string GroupRepository::Update(const domain::Group&)':
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp:74:32: error: conversion from 'const domain::Group' to non-scalar type 'nlohmann::json_abi_v3_12_0::json' {aka 'nlohmann::json_abi_v3_12_0::basic_json<>'} requested
+   74 |     nlohmann::json groupBody = entity;
+      |                                ^~~~~~
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp:77:41: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   77 |     pqxx::result result = tx.exec_params(
+      |                           ~~~~~~~~~~~~~~^
+   78 |         "UPDATE groups SET document = $1 WHERE id = $2 RETURNING id",
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   79 |         groupBody.dump(), entity.Id()
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+   80 |     );
+      |     ~                                    
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp: In member function 'virtual std::shared_ptr<domain::Group> GroupRepository::FindByTournamentIdAndGroupId(const std::string_view&, const std::string_view&)':
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp:115:41: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {const char*, const char*}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+  115 |     pqxx::result result = tx.exec_params(
+      |                           ~~~~~~~~~~~~~~^
+  116 |         "SELECT id, document FROM groups WHERE id = $1 AND document->>'tournamentId' = $2",
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  117 |         groupId.data(), tournamentId.data()
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  118 |     );
+      |     ~                                    
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp: In member function 'virtual std::shared_ptr<domain::Group> GroupRepository::FindByTournamentIdAndTeamId(const std::string_view&, const std::string_view&)':
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp:137:41: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {const char*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+  137 |     pqxx::result result = tx.exec_params(
+      |                           ~~~~~~~~~~~~~~^
+  138 |         "SELECT id, document FROM groups WHERE document->>'tournamentId' = $1 AND document->'teams' @> $2::jsonb",
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  139 |         tournamentId.data(), nlohmann::json({{"id", teamId.data()}}).dump()
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  140 |     );
+      |     ~                                    
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp: In member function 'virtual std::vector<std::shared_ptr<domain::Group>, std::allocator<std::shared_ptr<domain::Group> > > GroupRepository::FindByTournamentId(const std::string_view&)':
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp:161:41: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {const char*}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+  161 |     pqxx::result result = tx.exec_params(
+      |                           ~~~~~~~~~~~~~~^
+  162 |         "SELECT id, document FROM groups WHERE document->>'tournamentId' = $1",
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  163 |         tournamentId.data()
+      |         ~~~~~~~~~~~~~~~~~~~              
+  164 |     );
+      |     ~                                    
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp: In member function 'virtual void GroupRepository::UpdateGroupAddTeam(const std::string_view&, const std::shared_ptr<domain::Team>&)':
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp:181:31: error: conversion from 'std::__shared_ptr_access<domain::Team, __gnu_cxx::_S_atomic, false, false>::element_type' {aka 'domain::Team'} to non-scalar type 'nlohmann::json_abi_v3_12_0::json' {aka 'nlohmann::json_abi_v3_12_0::basic_json<>'} requested
+  181 |     nlohmann::json teamJson = *team;
+      |                               ^~~~~
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp:184:19: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, const char*}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+  184 |     tx.exec_params(
+      |     ~~~~~~~~~~~~~~^
+  185 |         "UPDATE groups SET document = jsonb_set(document, '{teams}', "
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  186 |         "COALESCE(document->'teams', '[]'::jsonb) || $1::jsonb) WHERE id = $2",
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  187 |         teamJson.dump(), groupId.data()
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  188 |     );
+      |     ~              
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp: In member function 'virtual bool GroupRepository::ExistsByName(const std::string_view&, const std::string&)':
+/workspace/tournament_common/include/persistence/repository/GroupRepository.hpp:197:41: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {const char*, const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+  197 |     pqxx::result result = tx.exec_params(
+      |                           ~~~~~~~~~~~~~~^
+  198 |         "SELECT COUNT(*) as count FROM groups WHERE document->>'tournamentId' = $1 AND document->>'name' = $2",
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  199 |         tournamentId.data(), name
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~        
+  200 |     );
+      |     ~                                    
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+[ 84%] Building CXX object tournament_services/tests/CMakeFiles/tournament_tests_runner.dir/__/src/delegate/TeamDelegate.cpp.o
+In file included from /workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:16,
+                 from /workspace/tournament_services/tests/delegate/GroupDelegateTest.cpp:9:
+/workspace/tournament_common/include/domain/Utilities.hpp: In function 'void domain::to_json(nlohmann::json_abi_v3_12_0::json&, const std::shared_ptr<Group>&)':
+/workspace/tournament_common/include/domain/Utilities.hpp:131:38: error: no match for 'operator=' (operand types are 'nlohmann::json_abi_v3_12_0::basic_json<>::value_type' {aka 'nlohmann::json_abi_v3_12_0::basic_json<>'} and 'std::vector<domain::Team>')
+  131 |         json["teams"] = group->Teams();
+      |                                      ^
+In file included from /workspace/tournament_common/include/persistence/repository/GroupRepository.hpp:10:
+/workspace/build/vcpkg_installed/x64-linux/include/nlohmann/json.hpp:1252:17: note: candidate: 'nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>& nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::operator=(nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>) [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]'
+ 1252 |     basic_json& operator=(basic_json other) noexcept (
+      |                 ^~~~~~~~
+/workspace/build/vcpkg_installed/x64-linux/include/nlohmann/json.hpp:1252:38: note:   no known conversion for argument 1 from 'std::vector<domain::Team>' to 'nlohmann::json_abi_v3_12_0::basic_json<>'
+ 1252 |     basic_json& operator=(basic_json other) noexcept (
+      |                           ~~~~~~~~~~~^~~~~
+/workspace/tournament_common/include/domain/Utilities.hpp: In function 'void domain::to_json(nlohmann::json_abi_v3_12_0::json&, const std::vector<std::shared_ptr<Group>, std::allocator<std::shared_ptr<Group> > >&)':
+/workspace/tournament_common/include/domain/Utilities.hpp:143:47: error: no match for 'operator=' (operand types are 'nlohmann::json_abi_v3_12_0::basic_json<>::value_type' {aka 'nlohmann::json_abi_v3_12_0::basic_json<>'} and 'std::vector<domain::Team>')
+  143 |             jsonGroup["teams"] = group->Teams();
+      |                                               ^
+/workspace/build/vcpkg_installed/x64-linux/include/nlohmann/json.hpp:1252:17: note: candidate: 'nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>& nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::operator=(nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>) [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]'
+ 1252 |     basic_json& operator=(basic_json other) noexcept (
+      |                 ^~~~~~~~
+/workspace/build/vcpkg_installed/x64-linux/include/nlohmann/json.hpp:1252:38: note:   no known conversion for argument 1 from 'std::vector<domain::Team>' to 'nlohmann::json_abi_v3_12_0::basic_json<>'
+ 1252 |     basic_json& operator=(basic_json other) noexcept (
+      |                           ~~~~~~~~~~~^~~~~
+/workspace/tournament_common/include/domain/Utilities.hpp: In function 'void domain::to_json(nlohmann::json_abi_v3_12_0::json&, const Group&)':
+/workspace/tournament_common/include/domain/Utilities.hpp:154:37: error: no match for 'operator=' (operand types are 'nlohmann::json_abi_v3_12_0::basic_json<>::value_type' {aka 'nlohmann::json_abi_v3_12_0::basic_json<>'} and 'std::vector<domain::Team>')
+  154 |         json["teams"] = group.Teams();
+      |                                     ^
+/workspace/build/vcpkg_installed/x64-linux/include/nlohmann/json.hpp:1252:17: note: candidate: 'nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>& nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>::operator=(nlohmann::json_abi_v3_12_0::basic_json<ObjectType, ArrayType, StringType, BooleanType, NumberIntegerType, NumberUnsignedType, NumberFloatType, AllocatorType, JSONSerializer, BinaryType, CustomBaseClass>) [with ObjectType = std::map; ArrayType = std::vector; StringType = std::__cxx11::basic_string<char>; BooleanType = bool; NumberIntegerType = long int; NumberUnsignedType = long unsigned int; NumberFloatType = double; AllocatorType = std::allocator; JSONSerializer = nlohmann::json_abi_v3_12_0::adl_serializer; BinaryType = std::vector<unsigned char>; CustomBaseClass = void]'
+ 1252 |     basic_json& operator=(basic_json other) noexcept (
+      |                 ^~~~~~~~
+/workspace/build/vcpkg_installed/x64-linux/include/nlohmann/json.hpp:1252:38: note:   no known conversion for argument 1 from 'std::vector<domain::Team>' to 'nlohmann::json_abi_v3_12_0::basic_json<>'
+ 1252 |     basic_json& operator=(basic_json other) noexcept (
+      |                           ~~~~~~~~~~~^~~~~
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp: In member function 'virtual std::string_view TeamRepository::Create(const domain::Team&)':
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:50:35: error: conversion from 'const domain::Team' to non-scalar type 'nlohmann::json_abi_v3_12_0::json' {aka 'nlohmann::json_abi_v3_12_0::basic_json<>'} requested
+   50 |         nlohmann::json teamBody = entity;
+      |                                   ^~~~~~
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp: In member function 'virtual std::string_view TeamRepository::Update(const domain::Team&)':
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:63:35: error: conversion from 'const domain::Team' to non-scalar type 'nlohmann::json_abi_v3_12_0::json' {aka 'nlohmann::json_abi_v3_12_0::basic_json<>'} requested
+   63 |         nlohmann::json teamBody = entity;
+      |                                   ^~~~~~
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:66:45: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   66 |         pqxx::result result = tx.exec_params(
+      |                               ~~~~~~~~~~~~~~^
+   67 |             "UPDATE teams SET document = $1 WHERE id = $2 RETURNING id",
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   68 |             teamBody.dump(),
+      |             ~~~~~~~~~~~~~~~~                 
+   69 |             entity.Id
+      |             ~~~~~~~~~                        
+   70 |         );
+      |         ~                                    
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp: In member function 'virtual bool TeamRepository::ExistsByName(const std::string&)':
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:90:45: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   90 |         pqxx::result result = tx.exec_params(
+      |                               ~~~~~~~~~~~~~~^
+   91 |             "SELECT COUNT(*) as count FROM teams WHERE document->>'name' = $1",
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   92 |             name
+      |             ~~~~                             
+   93 |         );
+      |         ~                                    
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+[ 89%] Building CXX object tournament_services/tests/CMakeFiles/tournament_tests_runner.dir/__/src/delegate/TournamentDelegate.cpp.o
+In file included from /workspace/tournament_services/src/delegate/TeamDelegate.cpp:6:
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp: In member function 'virtual std::string_view TeamRepository::Update(const domain::Team&)':
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:66:45: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   66 |         pqxx::result result = tx.exec_params(
+      |                               ~~~~~~~~~~~~~~^
+   67 |             "UPDATE teams SET document = $1 WHERE id = $2 RETURNING id",
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   68 |             teamBody.dump(),
+      |             ~~~~~~~~~~~~~~~~                 
+   69 |             entity.Id
+      |             ~~~~~~~~~                        
+   70 |         );
+      |         ~                                    
+In file included from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/dbtransaction.hxx:20,
+                 from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/blob.hxx:36,
+                 from /workspace/build/vcpkg_installed/x64-linux/include/pqxx/pqxx:6,
+                 from /workspace/tournament_common/include/persistence/configuration/PostgresConnection.hpp:8,
+                 from /workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:13:
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp: In member function 'virtual bool TeamRepository::ExistsByName(const std::string&)':
+/workspace/tournament_common/include/persistence/repository/TeamRepository.hpp:90:45: warning: 'pqxx::result pqxx::transaction_base::exec_params(std::string_view, Args&& ...) [with Args = {const std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >&}; std::string_view = std::basic_string_view<char>]' is deprecated: Use exec(zview, params) instead. [-Wdeprecated-declarations]
+   90 |         pqxx::result result = tx.exec_params(
+      |                               ~~~~~~~~~~~~~~^
+   91 |             "SELECT COUNT(*) as count FROM teams WHERE document->>'name' = $1",
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   92 |             name
+      |             ~~~~                             
+   93 |         );
+      |         ~                                    
+/workspace/build/vcpkg_installed/x64-linux/include/pqxx/transaction_base.hxx:728:10: note: declared here
+  728 |   result exec_params(std::string_view query, Args &&...args)
+      |          ^~~~~~~~~~~
+gmake[2]: *** [tournament_services/tests/CMakeFiles/tournament_tests_runner.dir/build.make:146: tournament_services/tests/CMakeFiles/tournament_tests_runner.dir/delegate/GroupDelegateTest.cpp.o] Error 1
+gmake[2]: *** Waiting for unfinished jobs....
+gmake[1]: *** [CMakeFiles/Makefile2:941: tournament_services/tests/CMakeFiles/tournament_tests_runner.dir/all] Error 2
+gmake[1]: *** Waiting for unfinished jobs....
+[ 94%] Linking CXX executable tournament_services
+[ 94%] Built target tournament_services
+gmake: *** [Makefile:91: all] Error 2

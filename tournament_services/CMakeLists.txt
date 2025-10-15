@@ -34,7 +34,10 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 
 target_include_directories(${PROJECT_NAME} INTERFACE ${HYPODERMIC_INCLUDE_DIRS})
 
-configure_file(
-        ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/configuration.json   # source file
-        ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/configuration.json  # destination
-        COPYONLY)
+# Copy configuration file if it exists (optional for tests)
+if(EXISTS ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/configuration.json)
+    configure_file(
+            ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}/configuration.json   # source file
+            ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/configuration.json  # destination
+            COPYONLY)
+endif()

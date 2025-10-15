@@ -47,7 +47,21 @@ std::string TournamentRepository::Create (const domain::Tournament & entity) {
 }
 
 std::string TournamentRepository::Update (const domain::Tournament & entity) {
-    return "id";
+    const nlohmann::json tournamentDoc = entity;
+
+    auto pooled = connectionProvider->Connection();
+    const auto connection = dynamic_cast<PostgresConnection*>(&*pooled);
+    pqxx::work tx(*(connection->connection));
+    const pqxx::result result = tx.exec_params(
+        "UPDATE tournaments SET document = $1 WHERE id = $2 RETURNING id",
+        tournamentDoc.dump(), entity.Id()
+    );
+    tx.commit();
+
+    if (result.empty()) {
+        return "";
+    }
+    return result[0]["id"].c_str();
 }
 
 void TournamentRepository::Delete(std::string id) {
@@ -73,4 +87,15 @@ std::vector<std::shared_ptr<domain::Tournament>> TournamentRepository::ReadAll()
     }
 
     return tournaments;
+}
+
+bool TournamentRepository::ExistsByName(const std::string& name) {
+    auto pooled = connectionProvider->Connection();
+    const auto connection = dynamic_cast<PostgresConnection*>(&*pooled);
+    pqxx::work tx(*(connection->connection));
+    const pqxx::result result = tx.exec_params(
+        "SELECT COUNT(*) as count FROM tournaments WHERE document->>'name' = $1", name
+    );
+    tx.commit();
+    return result[0]["count"].as<int>() > 0;
 }

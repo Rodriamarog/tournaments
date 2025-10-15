@@ -3,6 +3,8 @@ project(Tournaments)
 
 set(CMAKE_CXX_STANDARD 23)
 
+enable_testing()
+
 find_package(Crow CONFIG REQUIRED)
 find_package(libpqxx CONFIG REQUIRED)
 find_path(HYPODERMIC_INCLUDE_DIRS "Hypodermic/ActivatedRegistrationInfo.h")

@@ -47,7 +47,8 @@ public:
 
         auto pooled = connectionProvider->Connection();
         auto connection = dynamic_cast<PostgresConnection*>(&*pooled);
-        nlohmann::json teamBody = entity;
+        nlohmann::json teamBody;
+        domain::to_json(teamBody, entity);
 
         pqxx::work tx(*(connection->connection));
         pqxx::result result = tx.exec(pqxx::prepped{"insert_team"}, teamBody.dump());
@@ -58,12 +59,43 @@ public:
     }
 
     std::string_view Update(const domain::Team &entity) override {
-        return "newID";
+        auto pooled = connectionProvider->Connection();
+        auto connection = dynamic_cast<PostgresConnection*>(&*pooled);
+        nlohmann::json teamBody;
+        domain::to_json(teamBody, entity);
+
+        pqxx::work tx(*(connection->connection));
+        pqxx::result result = tx.exec_params(
+            "UPDATE teams SET document = $1 WHERE id = $2 RETURNING id",
+            teamBody.dump(),
+            entity.Id
+        );
+        tx.commit();
+
+        if (result.empty()) {
+            return "";
+        }
+
+        return result[0]["id"].c_str();
     }
 
 
     void Delete(std::string_view id) override{
-        
+
+    }
+
+    virtual bool ExistsByName(const std::string& name) {
+        auto pooled = connectionProvider->Connection();
+        auto connection = dynamic_cast<PostgresConnection*>(&*pooled);
+
+        pqxx::work tx(*(connection->connection));
+        pqxx::result result = tx.exec_params(
+            "SELECT COUNT(*) as count FROM teams WHERE document->>'name' = $1",
+            name
+        );
+        tx.commit();
+
+        return result[0]["count"].as<int>() > 0;
     }
 };
 

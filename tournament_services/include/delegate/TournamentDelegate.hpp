@@ -14,7 +14,9 @@ class TournamentDelegate final : public ITournamentDelegate {
     std::shared_ptr<TournamentRepository> tournamentRepository;
 public:
     explicit TournamentDelegate(const std::shared_ptr<TournamentRepository>& repository);
-    std::string CreateTournament(std::shared_ptr<domain::Tournament> tournament) override;
+    std::expected<std::string, std::string> CreateTournament(std::shared_ptr<domain::Tournament> tournament) override;
+    std::expected<void, std::string> UpdateTournament(const domain::Tournament& tournament) override;
+    std::shared_ptr<domain::Tournament> GetTournament(const std::string& id) override;
     std::vector<std::shared_ptr<domain::Tournament>> ReadAll() override;
 };
 
