@@ -20,6 +20,7 @@ public:
     std::expected<domain::Group, std::string> GetGroup(const std::string_view& tournamentId, const std::string_view& groupId) override;
     std::expected<void, std::string> UpdateGroup(const std::string_view& tournamentId, const domain::Group& group) override;
     std::expected<void, std::string> RemoveGroup(const std::string_view& tournamentId, const std::string_view& groupId) override;
+    std::expected<void, std::string> UpdateTeams(const std::string_view& tournamentId, const std::string_view& groupId, const std::vector<domain::Team>& teams) override;
 };
 
 GroupDelegate::GroupDelegate(const std::shared_ptr<TournamentRepository>& tournamentRepository, const std::shared_ptr<GroupRepository>& groupRepository, const std::shared_ptr<TeamRepository>& teamRepository)
@@ -57,6 +58,29 @@ inline std::expected<void, std::string> GroupDelegate::UpdateGroup(const std::st
 }
 inline std::expected<void, std::string> GroupDelegate::RemoveGroup(const std::string_view& tournamentId, const std::string_view& groupId) {
     return std::unexpected("Not implemented");
+}
+
+inline std::expected<void, std::string> GroupDelegate::UpdateTeams(const std::string_view& tournamentId, const std::string_view& groupId, const std::vector<domain::Team>& teams) {
+    const auto group = groupRepository->FindByTournamentIdAndGroupId(tournamentId, groupId);
+    if (group == nullptr) {
+        return std::unexpected("Group doesn't exist");
+    }
+    if (group->Teams().size() + teams.size() >= 16) {
+        return std::unexpected("Group at max capacity");
+    }
+    for (const auto& team : teams) {
+        if (const auto groupTeams = groupRepository->FindByTournamentIdAndTeamId(tournamentId, team.Id)) {
+            return std::unexpected(std::format("Team {} already exist", team.Id));
+        }
+    }
+    for (const auto& team : teams) {
+        const auto persistedTeam = teamRepository->ReadById(team.Id);
+        if (persistedTeam == nullptr) {
+            return std::unexpected(std::format("Team {} doesn't exist", team.Id));
+        }
+        groupRepository->UpdateGroupAddTeam(groupId, persistedTeam);
+    }
+    return {};
 }
 
 #endif /* SERVICE_GROUP_DELEGATE_HPP */
