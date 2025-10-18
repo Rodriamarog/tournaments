@@ -10,3 +10,4 @@
 .env
 tournament_services/configuration.json
 tournament_consumer/configuration.json
+POSTMAN_DEMO_GUIDE.txt
