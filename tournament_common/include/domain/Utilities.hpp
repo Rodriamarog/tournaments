@@ -27,7 +27,9 @@ namespace domain {
         if(json.contains("id")) {
             json.at("id").get_to(team.Id);
         }
-        json.at("name").get_to(team.Name);
+        if(json.contains("name")) {
+            json.at("name").get_to(team.Name);
+        }
     }
 
     inline void from_json(const nlohmann::json& json, std::vector<Team>& teams) {

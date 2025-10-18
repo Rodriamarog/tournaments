@@ -90,6 +90,14 @@ crow::response GroupController::CreateGroup(const crow::request& request, const 
     }
 
     auto requestBody = nlohmann::json::parse(request.body);
+
+    // Validate required fields
+    if (!requestBody.contains("name")) {
+        response.code = crow::BAD_REQUEST;
+        response.body = "Missing required field: name";
+        return response;
+    }
+
     domain::Group group = requestBody;
 
     auto groupId = groupDelegate->CreateGroup(tournamentId, group);
@@ -156,6 +164,14 @@ crow::response GroupController::AddTeamToGroup(const crow::request& request, con
     }
 
     auto requestBody = nlohmann::json::parse(request.body);
+
+    // Validate required fields for team
+    if (!requestBody.contains("id")) {
+        response.code = crow::BAD_REQUEST;
+        response.body = "Missing required field: id";
+        return response;
+    }
+
     domain::Team team = requestBody;
 
     // Call UpdateTeams with a single-element vector

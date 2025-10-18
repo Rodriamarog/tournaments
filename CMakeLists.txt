@@ -12,3 +12,4 @@ find_package(nlohmann_json CONFIG REQUIRED)
 
 add_subdirectory(tournament_common)
 add_subdirectory(tournament_services)
+add_subdirectory(tournament_consumer)

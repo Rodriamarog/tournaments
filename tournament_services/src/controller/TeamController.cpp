@@ -34,9 +34,18 @@ crow::response TeamController::SaveTeam(const crow::request& request) const {
 
     if(!nlohmann::json::accept(request.body)) {
         response.code = crow::BAD_REQUEST;
+        response.body = "Invalid JSON";
         return response;
     }
     auto requestBody = nlohmann::json::parse(request.body);
+
+    // Validate required fields
+    if (!requestBody.contains("name")) {
+        response.code = crow::BAD_REQUEST;
+        response.body = "Missing required field: name";
+        return response;
+    }
+
     domain::Team team = requestBody;
 
     auto createResult = teamDelegate->SaveTeam(team);

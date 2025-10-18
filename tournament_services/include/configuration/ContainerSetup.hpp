@@ -12,13 +12,16 @@
 
 #include "persistence/repository/IRepository.hpp"
 #include "persistence/repository/TeamRepository.hpp"
+#include "persistence/repository/TournamentRepository.hpp"
+#include "persistence/repository/GroupRepository.hpp"
 #include "RunConfiguration.hpp"
 #include "delegate/TeamDelegate.hpp"
+#include "delegate/TournamentDelegate.hpp"
+#include "delegate/GroupDelegate.hpp"
 #include "controller/TeamController.hpp"
 #include "controller/TournamentController.hpp"
-#include "delegate/TournamentDelegate.hpp"
+#include "controller/GroupController.hpp"
 #include "persistence/configuration/PostgresConnectionProvider.hpp"
-#include "persistence/repository/TournamentRepository.hpp"
 
 namespace config {
     inline std::shared_ptr<Hypodermic::Container> containerSetup() {
@@ -37,17 +40,16 @@ namespace config {
 
 
         builder.registerType<TeamRepository>().as<IRepository<domain::Team, std::string_view> >().singleInstance();
-
         builder.registerType<TeamDelegate>().as<ITeamDelegate>().singleInstance();
         builder.registerType<TeamController>().singleInstance();
 
-        builder.registerType<TournamentRepository>().as<IRepository<domain::Tournament, std::string> >().
-                singleInstance();
-
-        builder.registerType<TournamentDelegate>()
-                .as<ITournamentDelegate>()
-                .singleInstance();
+        builder.registerType<TournamentRepository>().as<IRepository<domain::Tournament, std::string> >().singleInstance();
+        builder.registerType<TournamentDelegate>().as<ITournamentDelegate>().singleInstance();
         builder.registerType<TournamentController>().singleInstance();
+
+        builder.registerType<GroupRepository>().singleInstance();
+        builder.registerType<GroupDelegate>().as<IGroupDelegate>().singleInstance();
+        builder.registerType<GroupController>().singleInstance();
 
         return builder.build();
     }

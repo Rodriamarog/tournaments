@@ -40,7 +40,24 @@ public:
     }
 
     std::shared_ptr<domain::Team> ReadById(std::string_view id) override {
-        return std::make_shared<domain::Team>();
+        auto pooled = connectionProvider->Connection();
+        auto connection = dynamic_cast<PostgresConnection*>(&*pooled);
+
+        pqxx::work tx(*(connection->connection));
+        pqxx::result result = tx.exec_params(
+            "SELECT id, document->>'name' as name FROM teams WHERE id = $1",
+            id.data()
+        );
+        tx.commit();
+
+        if (result.empty()) {
+            return nullptr;
+        }
+
+        return std::make_shared<domain::Team>(domain::Team{
+            result[0]["id"].c_str(),
+            result[0]["name"].c_str()
+        });
     }
 
     std::string_view Create(const domain::Team &entity) override {

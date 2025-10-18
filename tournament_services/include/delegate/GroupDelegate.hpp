@@ -125,7 +125,7 @@ inline std::expected<void, std::string> GroupDelegate::UpdateTeams(const std::st
     if (group == nullptr) {
         return std::unexpected("Group doesn't exist");
     }
-    if (group->Teams().size() + teams.size() >= 16) {
+    if (group->Teams().size() + teams.size() > 16) {
         return std::unexpected("Group at max capacity");
     }
     for (const auto& team : teams) {
