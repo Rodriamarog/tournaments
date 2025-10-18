@@ -21,6 +21,14 @@ crow::response TournamentController::CreateTournament(const crow::request &reque
     }
 
     nlohmann::json body = nlohmann::json::parse(request.body);
+
+    // Validate required fields
+    if (!body.contains("name")) {
+        response.code = crow::BAD_REQUEST;
+        response.body = "Missing required field: name";
+        return response;
+    }
+
     const std::shared_ptr<domain::Tournament> tournament = std::make_shared<domain::Tournament>(body);
 
     auto createResult = tournamentDelegate->CreateTournament(tournament);
