@@ -82,3 +82,6 @@ protected:
 
 // All 12 GroupDelegate tests commented out - they cause segfaults in Release builds
 */
+
+/* Posible solución: usar una interfaz para pura para mockear o clases abstractas con métodos virtuales puros
+El mock  hereda directamente de la interfaz, sin necesidad de llamar al constructor de la clase concreta que requiere el nullptr de la dependencia.*/
