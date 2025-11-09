@@ -7,5 +7,8 @@
         "provider" : "postgres",
         "poolSize": 2,
         "connectionString" : "postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT_ID.supabase.co:5432/postgres"
+    },
+    "messagingConfig" : {
+        "brokerURI" : "tcp://localhost:61616"
     }
 }

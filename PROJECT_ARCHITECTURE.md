@@ -4,14 +4,15 @@
 
 ## Table of Contents
 1. [What We Implemented](#what-we-implemented)
-2. [Key Implementation: UpdateGroup and RemoveGroup](#key-implementation-updategroup-and-removegroup)
-3. [Key Implementation: Group Business Validations](#key-implementation-group-business-validations)
-4. [Key Implementation: Supabase Migration](#key-implementation-supabase-migration)
-5. [Key Implementation: Repository Method ExistsByName](#key-implementation-repository-method-existsbyname)
-6. [Architecture Changes We Made](#architecture-changes-we-made)
-7. [Testing Strategy for Our Code](#testing-strategy-for-our-code)
-8. [Known Issues and Why They Exist](#known-issues-and-why-they-exist)
-9. [Questions Professor Will Ask](#questions-professor-will-ask)
+2. [Key Implementation: Match System with Event-Driven Architecture](#key-implementation-match-system-with-event-driven-architecture)
+3. [Key Implementation: UpdateGroup and RemoveGroup](#key-implementation-updategroup-and-removegroup)
+4. [Key Implementation: Group Business Validations](#key-implementation-group-business-validations)
+5. [Key Implementation: Supabase Migration](#key-implementation-supabase-migration)
+6. [Key Implementation: Repository Method ExistsByName](#key-implementation-repository-method-existsbyname)
+7. [Architecture Changes We Made](#architecture-changes-we-made)
+8. [Testing Strategy for Our Code](#testing-strategy-for-our-code)
+9. [Known Issues and Why They Exist](#known-issues-and-why-they-exist)
+10. [Questions Professor Will Ask](#questions-professor-will-ask)
 
 ---
 
@@ -49,6 +50,654 @@ bd3a46e - Implement Supabase integration for single-container architecture
 The two major commits are:
 - **`bd3a46e`**: Supabase migration (database architecture change)
 - **`e023ad9`**: Group validations (business logic implementation)
+
+---
+
+## Key Implementation: Match System with Event-Driven Architecture
+
+### Overview
+
+The Match System is our **major implementation** - a complete tournament match management system with:
+- **Round-robin match generation** triggered by ActiveMQ events
+- **Playoff bracket generation** (quarterfinals → semifinals → finals)
+- **Score registration** with automatic winner advancement
+- **Event-driven architecture** using Apache ActiveMQ
+- **27 comprehensive tests** (15 controller + 12 delegate)
+
+This is **entirely our implementation** - the professor's code had NO match system.
+
+### Architecture
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    Event-Driven Match Flow                    │
+└──────────────────────────────────────────────────────────────┘
+
+1. Group Stage (Round Robin)
+   ┌─────────────┐         ┌──────────────┐         ┌────────────────┐
+   │ Add Team    │ ─POST→ │ GroupDelegate │ ─emit→ │  tournament.   │
+   │ via API     │         │               │         │  team-add      │
+   └─────────────┘         └──────────────┘         └───────┬────────┘
+                                                              │
+                                                              ▼
+                                                    ┌──────────────────┐
+                                                    │ TeamAdded        │
+                                                    │ Consumer         │
+                                                    └────────┬─────────┘
+                                                             │
+                                                             ▼
+                                                    ┌──────────────────┐
+                                                    │MatchGeneration   │
+                                                    │ Service          │
+                                                    │ (Round Robin)    │
+                                                    └──────────────────┘
+                                                    Creates 6 matches
+                                                    for 4 teams
+
+2. Playoff Stage (Single Elimination)
+   ┌─────────────┐         ┌──────────────┐         ┌────────────────┐
+   │ Register    │ ─PUT→  │ MatchDelegate │ ─emit→ │  tournament.   │
+   │ Score       │         │               │         │  score-reg     │
+   └─────────────┘         └──────────────┘         └───────┬────────┘
+                                                              │
+                                                              ▼
+                                                    ┌──────────────────┐
+                                                    │ ScoreRegistered  │
+                                                    │ Consumer         │
+                                                    └────────┬─────────┘
+                                                             │
+                                                             ▼
+                                                    ┌──────────────────┐
+                                                    │ PlayoffGen       │
+                                                    │ Service          │
+                                                    └──────────────────┘
+                                                    QF → SF → Finals
+```
+
+### Files We Created
+
+**Domain Model** (tournament_common/include/domain/Match.hpp - 318 lines):
+```cpp
+class Match {
+    std::string id;
+    std::string tournamentId;
+    std::optional<std::string> groupId;  // null for playoff matches
+    MatchTeam home;
+    MatchTeam visitor;
+    std::optional<Score> score;
+    std::string round;   // "regular", "quarterfinals", "semifinals", "finals"
+    std::string status;  // "pending", "played"
+
+public:
+    std::optional<std::string> GetWinnerId() const;  // Returns winning team ID
+    // ... JSON serialization, getters, setters
+};
+```
+
+**Repository** (tournament_common/include/persistence/repository/MatchRepository.hpp - 233 lines):
+```cpp
+class MatchRepository : public IRepository<domain::Match, std::string> {
+public:
+    // Basic CRUD
+    std::shared_ptr<domain::Match> ReadById(std::string id) override;
+    std::string Create(const domain::Match& entity) override;
+    std::string Update(const domain::Match& entity) override;
+    void Delete(std::string id) override;
+
+    // Custom queries
+    std::vector<std::shared_ptr<domain::Match>> FindByTournamentId(const std::string_view& tournamentId);
+    std::vector<std::shared_ptr<domain::Match>> FindByTournamentIdAndStatus(const std::string_view& tournamentId, const std::string& status);
+    std::vector<std::shared_ptr<domain::Match>> FindByGroupId(const std::string_view& groupId);
+    std::vector<std::shared_ptr<domain::Match>> FindByTournamentIdAndRound(const std::string_view& tournamentId, const std::string& round);
+    bool ExistsByGroupId(const std::string_view& groupId);
+};
+```
+
+**Delegate** (tournament_services/include/delegate/MatchDelegate.hpp - 192 lines):
+```cpp
+class MatchDelegate {
+public:
+    // Business logic methods
+    std::expected<std::vector<domain::Match>, std::string> GetMatches(const std::string_view& tournamentId);
+    std::expected<domain::Match, std::string> GetMatch(const std::string_view& matchId);
+    std::expected<std::string, std::string> CreateMatch(const domain::Match& match);
+    std::expected<void, std::string> RegisterScore(const std::string_view& matchId, int homeScore, int visitorScore);
+    std::expected<void, std::string> DeleteMatch(const std::string_view& matchId);
+};
+```
+
+**Controller** (tournament_services/src/controller/MatchController.cpp - 148 lines):
+```cpp
+class MatchController {
+public:
+    // REST API endpoints
+    crow::response GetMatches(const crow::request& request, const std::string& tournamentId);
+    crow::response GetMatch(const crow::request& request, const std::string& matchId);
+    crow::response CreateMatch(const crow::request& request);
+    crow::response RegisterScore(const crow::request& request, const std::string& matchId);
+    crow::response DeleteMatch(const crow::request& request, const std::string& matchId);
+};
+```
+
+**Round Robin Service** (tournament_services/include/service/MatchGenerationService.hpp - 186 lines):
+```cpp
+class MatchGenerationService {
+public:
+    // Generates round-robin matches when group is full
+    std::expected<void, std::string> GenerateRoundRobinMatches(
+        const std::string_view& tournamentId,
+        const std::string_view& groupId
+    );
+
+    bool IsGroupReadyForMatches(
+        const std::string_view& tournamentId,
+        const std::string_view& groupId
+    );
+
+private:
+    int CalculateMatchCount(int teamCount) const {
+        return (teamCount * (teamCount - 1)) / 2;  // Combination formula
+    }
+};
+```
+
+**Playoff Service** (tournament_services/include/service/PlayoffGenerationService.hpp - 372 lines):
+```cpp
+class PlayoffGenerationService {
+public:
+    bool AreAllGroupMatchesCompleted(const std::string_view& tournamentId);
+
+    std::expected<void, std::string> GenerateQuarterfinals(
+        const std::string_view& tournamentId
+    );
+
+    std::expected<void, std::string> AdvanceWinners(
+        const std::string_view& tournamentId,
+        const std::string& round  // "quarterfinals" or "semifinals"
+    );
+
+private:
+    struct TeamStanding {
+        domain::Team team;
+        int wins;
+        int goalsFor;
+        int goalsAgainst;
+        int goalDifference;
+    };
+
+    std::vector<TeamStanding> CalculateGroupStandings(
+        const std::string_view& tournamentId,
+        const std::string_view& groupId
+    );
+};
+```
+
+**ActiveMQ Consumers** (tournament_consumer/include/consumer/):
+- **TeamAddedConsumer.hpp** (180 lines): Listens for "tournament.team-add" events
+- **ScoreRegisteredConsumer.hpp** (200 lines): Listens for "tournament.score-registered" events
+
+**Consumer Application** (tournament_consumer/main.cpp - 118 lines):
+```cpp
+int main() {
+    // Initialize ActiveMQ
+    activemq::library::ActiveMQCPP::initializeLibrary();
+
+    // Create database connection pool
+    auto connectionProvider = std::make_shared<PostgresConnectionProvider>(dbConnectionString, 5);
+
+    // Create repositories
+    auto matchRepository = std::make_shared<MatchRepository>(connectionProvider);
+    auto groupRepository = std::make_shared<GroupRepository>(connectionProvider);
+    auto tournamentRepository = std::make_shared<TournamentRepository>(connectionProvider);
+
+    // Create services
+    auto matchGenerationService = std::make_shared<MatchGenerationService>(...);
+    auto playoffGenerationService = std::make_shared<PlayoffGenerationService>(...);
+
+    // Connect to ActiveMQ
+    cms::Connection* connection = connectionFactory.createConnection();
+    connection->start();
+
+    // Start both consumers
+    TeamAddedConsumer teamAddedConsumer(matchGenerationService, connection);
+    teamAddedConsumer.Start();
+
+    ScoreRegisteredConsumer scoreRegisteredConsumer(playoffGenerationService, connection);
+    scoreRegisteredConsumer.Start();
+
+    // Event loop
+    while (running) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+}
+```
+
+### Complete Tournament Flow
+
+**Step 1: Create Tournament and Groups**
+```bash
+POST /api/tournaments
+{
+  "id": "wcup-2026",
+  "name": "World Cup 2026",
+  "format": {
+    "type": "round-robin-with-playoffs",
+    "numberOfGroups": 4,
+    "maxTeamsPerGroup": 4
+  }
+}
+
+POST /api/groups
+{
+  "tournamentId": "wcup-2026",
+  "name": "Group A"
+}
+# Repeat for Groups B, C, D
+```
+
+**Step 2: Add Teams (Triggers Round-Robin Generation)**
+```bash
+POST /api/groups/add-team
+{
+  "tournamentId": "wcup-2026",
+  "groupId": "Group A",
+  "teamId": "team-1"
+}
+# Add teams 2, 3, 4 to Group A
+
+# When 4th team is added:
+# 1. GroupDelegate emits "tournament.team-add" event
+# 2. TeamAddedConsumer receives event
+# 3. MatchGenerationService checks if group is full
+# 4. Generates 6 round-robin matches: (4 * 3) / 2 = 6
+```
+
+**Generated Matches**:
+```json
+[
+  {
+    "id": "wcup-2026-Group A-team-1-vs-team-2",
+    "home": {"id": "team-1", "name": "Brazil"},
+    "visitor": {"id": "team-2", "name": "Germany"},
+    "round": "regular",
+    "status": "pending"
+  },
+  // ... 5 more matches
+]
+```
+
+**Step 3: Register Scores for Group Matches**
+```bash
+PUT /api/matches/wcup-2026-Group A-team-1-vs-team-2/score
+{
+  "home": 2,
+  "visitor": 1
+}
+
+# After scoring all 24 group matches (4 groups * 6 matches):
+# 1. MatchDelegate emits "tournament.score-registered" event
+# 2. ScoreRegisteredConsumer receives event
+# 3. PlayoffGenerationService checks if all group matches complete
+# 4. If yes → generates quarterfinals
+```
+
+**Step 4: Quarterfinals Generation**
+```cpp
+// PlayoffGenerationService logic:
+auto groups = groupRepository->FindByTournamentId(tournamentId);
+for (auto& group : groups) {
+    auto standings = CalculateGroupStandings(tournamentId, group->Id());
+    auto topTeams = GetTopTeams(standings, 2);  // Top 2 teams
+    groupTopTeams.push_back(topTeams);
+}
+
+// Seeding:
+// QF1: Group A 1st vs Group D 2nd
+// QF2: Group B 1st vs Group C 2nd
+// QF3: Group C 1st vs Group B 2nd
+// QF4: Group D 1st vs Group A 2nd
+```
+
+**Team Standings Calculation** (lines 140-201):
+```cpp
+// For each match in group:
+if (score.home > score.visitor) {
+    standings[homeId].wins++;
+} else if (score.visitor > score.home) {
+    standings[visitorId].wins++;
+}
+
+standings[homeId].goalsFor += score.home;
+standings[homeId].goalsAgainst += score.visitor;
+
+// Sort by:
+// 1. Wins (descending)
+// 2. Goal difference (descending)
+// 3. Goals scored (descending)
+std::sort(result.begin(), result.end(), [](const TeamStanding& a, const TeamStanding& b) {
+    if (a.wins != b.wins) return a.wins > b.wins;
+    if (a.goalDifference != b.goalDifference) return a.goalDifference > b.goalDifference;
+    return a.goalsFor > b.goalsFor;
+});
+```
+
+**Step 5: Playoffs Progression**
+```bash
+# Register quarterfinal scores
+PUT /api/matches/wcup-2026-qf-1/score {"home": 2, "visitor": 1}
+PUT /api/matches/wcup-2026-qf-2/score {"home": 3, "visitor": 1}
+PUT /api/matches/wcup-2026-qf-3/score {"home": 1, "visitor": 2}
+PUT /api/matches/wcup-2026-qf-4/score {"home": 2, "visitor": 0}
+
+# After all 4 QF matches scored:
+# ScoreRegisteredConsumer triggers AdvanceWinners("quarterfinals")
+# Generates 2 semifinal matches
+
+# Register semifinal scores
+PUT /api/matches/wcup-2026-semifinals-1/score {"home": 2, "visitor": 1}
+PUT /api/matches/wcup-2026-semifinals-2/score {"home": 3, "visitor": 2}
+
+# Generates finals match
+
+# Register final score
+PUT /api/matches/wcup-2026-finals-1/score {"home": 2, "visitor": 1}
+# Tournament complete!
+```
+
+### Key Algorithms
+
+**Round Robin Generation** (MatchGenerationService.hpp lines 158-181):
+```cpp
+// Generate all possible pairings without duplicates
+for (size_t i = 0; i < teams.size(); i++) {
+    for (size_t j = i + 1; j < teams.size(); j++) {
+        domain::Match match;
+        match.Id() = tournamentId + "-" + groupId + "-" + teams[i].Id + "-vs-" + teams[j].Id;
+        match.Home() = domain::MatchTeam(teams[i].Id, teams[i].Name);
+        match.Visitor() = domain::MatchTeam(teams[j].Id, teams[j].Name);
+        match.Round() = "regular";
+        match.Status() = "pending";
+
+        matchRepository->Create(match);
+    }
+}
+
+// For 4 teams: (0,1), (0,2), (0,3), (1,2), (1,3), (2,3) = 6 matches
+```
+
+**Winner Advancement** (PlayoffGenerationService.hpp lines 332-367):
+```cpp
+// Get winners from current round
+std::vector<std::string> winners;
+for (const auto& match : completedMatches) {
+    auto winnerId = match->GetWinnerId();  // Based on score comparison
+    if (winnerId.has_value()) {
+        winners.push_back(winnerId.value());
+    }
+}
+
+// Pair winners for next round
+for (size_t i = 0; i < winners.size(); i += 2) {
+    domain::Match nextMatch;
+    nextMatch.Id() = tournamentId + "-" + nextRound + "-" + std::to_string(i / 2 + 1);
+    nextMatch.Home() = homeTeam;  // Winner of match i
+    nextMatch.Visitor() = visitorTeam;  // Winner of match i+1
+    nextMatch.Round() = nextRound;
+    nextMatch.Status() = "pending";
+
+    matchRepository->Create(nextMatch);
+}
+```
+
+### REST API Endpoints
+
+```
+GET    /api/tournaments/{id}/matches           - List all matches
+GET    /api/matches/{id}                       - Get match details
+POST   /api/matches                            - Create match (manual)
+PUT    /api/matches/{id}/score                 - Register score
+DELETE /api/matches/{id}                       - Delete match
+
+Query Parameters:
+  ?status=pending|played
+  ?round=regular|quarterfinals|semifinals|finals
+```
+
+**Example Responses**:
+
+```json
+GET /api/tournaments/wcup-2026/matches?round=quarterfinals
+
+[
+  {
+    "id": "wcup-2026-qf-1",
+    "tournamentId": "wcup-2026",
+    "groupId": null,
+    "home": {
+      "id": "team-a1",
+      "name": "Brazil"
+    },
+    "visitor": {
+      "id": "team-d2",
+      "name": "France"
+    },
+    "score": {
+      "home": 2,
+      "visitor": 1
+    },
+    "round": "quarterfinals",
+    "status": "played"
+  }
+]
+```
+
+### Testing Strategy
+
+**MatchControllerTest.cpp - 15 Tests**:
+```cpp
+// Basic CRUD
+TEST_F(MatchControllerTest, GetMatches_Success_ReturnsMatches)
+TEST_F(MatchControllerTest, GetMatch_Success_ReturnsMatch)
+TEST_F(MatchControllerTest, CreateMatch_Success_ReturnsCreated)
+TEST_F(MatchControllerTest, DeleteMatch_Success_ReturnsNoContent)
+
+// Score Registration
+TEST_F(MatchControllerTest, RegisterScore_Success_ReturnsNoContent)
+TEST_F(MatchControllerTest, RegisterScore_InvalidScore_ReturnsBadRequest)
+TEST_F(MatchControllerTest, RegisterScore_MatchNotFound_ReturnsNotFound)
+TEST_F(MatchControllerTest, RegisterScore_UpdateFails_ReturnsInternalServerError)
+
+// Query Filtering
+TEST_F(MatchControllerTest, GetMatches_WithStatusFilter_ReturnsFilteredMatches)
+TEST_F(MatchControllerTest, GetMatches_WithRoundFilter_ReturnsFilteredMatches)
+
+// Error Cases
+TEST_F(MatchControllerTest, GetMatches_TournamentNotFound_ReturnsNotFound)
+TEST_F(MatchControllerTest, GetMatch_NotFound_ReturnsNotFound)
+TEST_F(MatchControllerTest, CreateMatch_InvalidJson_ReturnsBadRequest)
+TEST_F(MatchControllerTest, CreateMatch_TournamentNotFound_ReturnsNotFound)
+TEST_F(MatchControllerTest, DeleteMatch_NotFound_ReturnsNotFound)
+```
+
+**MatchDelegateTest.cpp - 12 Tests**:
+```cpp
+// Business Logic
+TEST_F(MatchDelegateTest, GetMatches_Success_ReturnsMatches)
+TEST_F(MatchDelegateTest, GetMatches_TournamentNotFound_ReturnsError)
+TEST_F(MatchDelegateTest, GetMatch_Success_ReturnsMatch)
+TEST_F(MatchDelegateTest, GetMatch_MatchNotFound_ReturnsError)
+
+// Create Match Validation
+TEST_F(MatchDelegateTest, CreateMatch_Success_ReturnsMatchId)
+TEST_F(MatchDelegateTest, CreateMatch_TournamentNotFound_ReturnsError)
+
+// Score Registration
+TEST_F(MatchDelegateTest, RegisterScore_Success_UpdatesMatch)
+TEST_F(MatchDelegateTest, RegisterScore_MatchNotFound_ReturnsError)
+TEST_F(MatchDelegateTest, RegisterScore_RepositoryUpdateFails_ReturnsError)
+
+// Delete Match
+TEST_F(MatchDelegateTest, DeleteMatch_Success_DeletesMatch)
+TEST_F(MatchDelegateTest, DeleteMatch_MatchNotFound_ReturnsError)
+TEST_F(MatchDelegateTest, DeleteMatch_DelegateCallsFindById_VerifiesInteraction)
+```
+
+### Database Schema
+
+```sql
+CREATE TABLE IF NOT EXISTS MATCHES (
+    id VARCHAR PRIMARY KEY,
+    tournament_id VARCHAR NOT NULL,
+    document JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for tournament queries
+CREATE INDEX IF NOT EXISTS idx_matches_tournament_id
+ON MATCHES (tournament_id);
+
+-- Index for status queries
+CREATE INDEX IF NOT EXISTS idx_matches_status
+ON MATCHES ((document->>'status'));
+
+-- Index for round queries
+CREATE INDEX IF NOT EXISTS idx_matches_round
+ON MATCHES ((document->>'round'));
+
+-- GIN index for full JSONB queries
+CREATE INDEX IF NOT EXISTS idx_matches_document_gin
+ON MATCHES USING gin (document);
+```
+
+### Integration Test Script
+
+**test-match-flow.sh** (300+ lines):
+```bash
+#!/bin/bash
+# Complete tournament flow test:
+# 1. Create tournament with 4 groups
+# 2. Add 4 teams to each group (triggers round-robin generation)
+# 3. Register scores for all 24 group matches (triggers quarterfinals)
+# 4. Register scores for 4 quarterfinals (triggers semifinals)
+# 5. Register scores for 2 semifinals (triggers finals)
+# 6. Register final score
+# 7. Display tournament winner
+
+./test-match-flow.sh
+# Expected: 24 group matches + 4 QF + 2 SF + 1 Final = 31 total matches
+```
+
+### Why Event-Driven Architecture?
+
+**Compared to Synchronous Approach**:
+
+**Without Events (Synchronous)**:
+```cpp
+// In GroupDelegate::UpdateTeams():
+groupRepository->Update(group);
+
+// Immediately call match generation (tight coupling)
+if (group->Teams().size() >= maxTeams) {
+    matchGenerationService->GenerateRoundRobinMatches(tournamentId, groupId);
+}
+```
+
+**With Events (Asynchronous)**:
+```cpp
+// In GroupDelegate::UpdateTeams():
+groupRepository->Update(group);
+
+// Emit event (loose coupling)
+messageProducer->SendMessage(eventJson, "tournament.team-add");
+
+// Consumer handles it asynchronously
+// Different process, different thread, can scale independently
+```
+
+**Benefits**:
+1. **Decoupling**: API service doesn't depend on match generation service
+2. **Scalability**: Can run multiple consumers for high load
+3. **Resilience**: If consumer crashes, events are queued and processed later
+4. **Auditability**: Event queue provides history of what happened
+5. **Flexibility**: Easy to add new consumers without changing API
+
+**Trade-offs**:
+1. **Complexity**: Two processes instead of one
+2. **Eventual Consistency**: Matches not created instantly
+3. **Debugging**: Harder to trace flow across processes
+4. **Infrastructure**: Requires ActiveMQ broker
+
+### Performance Optimizations
+
+**1. Connection Pooling**:
+```cpp
+auto connectionProvider = std::make_shared<PostgresConnectionProvider>(dbConnectionString, 5);
+// Maintains 5 persistent database connections
+// Avoids reconnection overhead on every request
+```
+
+**2. Prepared Statements**:
+```sql
+PREPARE insert_match (JSONB) AS
+    INSERT INTO matches (id, tournament_id, document)
+    VALUES ($1, $2, $3) RETURNING id;
+```
+
+**3. GIN Indexes**:
+```sql
+CREATE INDEX idx_matches_document_gin ON MATCHES USING gin (document);
+-- Makes JSONB queries fast: WHERE document->>'status' = 'pending'
+```
+
+**4. Efficient Duplicate Checking**:
+```cpp
+// Instead of loading all matches into memory:
+// ✗ auto matches = matchRepository->FindByGroupId(groupId);
+// ✗ return !matches.empty();
+
+// Single COUNT(*) query:
+// ✓ return matchRepository->ExistsByGroupId(groupId);
+```
+
+### Production Deployment
+
+**Docker Compose**:
+```yaml
+version: '3.8'
+services:
+  activemq:
+    image: apache/activemq-classic:6.1.4
+    ports:
+      - "61616:61616"  # OpenWire protocol
+      - "8161:8161"    # Web console
+    environment:
+      - ACTIVEMQ_ADMIN_LOGIN=admin
+      - ACTIVEMQ_ADMIN_PASSWORD=admin
+
+  tournament_services:
+    build: ./tournament_services
+    ports:
+      - "8080:8080"
+    depends_on:
+      - activemq
+    environment:
+      - BROKER_URI=tcp://activemq:61616
+      - DB_CONNECTION_STRING=postgresql://...
+
+  tournament_consumer:
+    build: ./tournament_consumer
+    depends_on:
+      - activemq
+      - tournament_services
+    environment:
+      - BROKER_URI=tcp://activemq:61616
+      - DB_CONNECTION_STRING=postgresql://...
+```
+
+**Monitoring**:
+- ActiveMQ Web Console: `http://localhost:8161/admin` (admin/admin)
+- View queues: `tournament.team-add`, `tournament.score-registered`
+- Monitor message throughput and consumer connections
 
 ---
 

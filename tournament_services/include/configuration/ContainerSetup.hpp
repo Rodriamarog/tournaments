@@ -18,10 +18,15 @@
 #include "delegate/TeamDelegate.hpp"
 #include "delegate/TournamentDelegate.hpp"
 #include "delegate/GroupDelegate.hpp"
+#include "delegate/MatchDelegate.hpp"
 #include "controller/TeamController.hpp"
 #include "controller/TournamentController.hpp"
 #include "controller/GroupController.hpp"
+#include "controller/MatchController.hpp"
 #include "persistence/configuration/PostgresConnectionProvider.hpp"
+#include "persistence/repository/MatchRepository.hpp"
+#include "cms/ConnectionManager.hpp"
+#include "cms/QueueMessageProducer.hpp"
 
 namespace config {
     inline std::shared_ptr<Hypodermic::Container> containerSetup() {
@@ -38,6 +43,13 @@ namespace config {
             configuration["databaseConfig"]["poolSize"].get<size_t>());
         builder.registerInstance(postgressConnection).as<IDbConnectionProvider>();
 
+        // Setup ActiveMQ connection
+        std::shared_ptr<ConnectionManager> connectionManager = std::make_shared<ConnectionManager>();
+        connectionManager->initialize(configuration["messagingConfig"]["brokerURI"].get<std::string>());
+        builder.registerInstance(connectionManager);
+
+        builder.registerType<QueueMessageProducer>().as<IQueueMessageProducer>().singleInstance();
+
 
         builder.registerType<TeamRepository>().as<IRepository<domain::Team, std::string_view> >().singleInstance();
         builder.registerType<TeamDelegate>().as<ITeamDelegate>().singleInstance();
@@ -50,6 +62,10 @@ namespace config {
         builder.registerType<GroupRepository>().singleInstance();
         builder.registerType<GroupDelegate>().as<IGroupDelegate>().singleInstance();
         builder.registerType<GroupController>().singleInstance();
+
+        builder.registerType<MatchRepository>().singleInstance();
+        builder.registerType<MatchDelegate>().as<IMatchDelegate>().singleInstance();
+        builder.registerType<MatchController>().singleInstance();
 
         return builder.build();
     }

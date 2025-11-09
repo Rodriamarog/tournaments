@@ -7,14 +7,16 @@
 #include <expected>
 
 #include "IGroupDelegate.hpp"
+#include "cms/IQueueMessageProducer.hpp"
 
 class GroupDelegate : public IGroupDelegate{
     std::shared_ptr<TournamentRepository> tournamentRepository;
     std::shared_ptr<GroupRepository> groupRepository;
     std::shared_ptr<TeamRepository> teamRepository;
+    std::shared_ptr<IQueueMessageProducer> messageProducer;
 
 public:
-    GroupDelegate(const std::shared_ptr<TournamentRepository>& tournamentRepository, const std::shared_ptr<GroupRepository>& groupRepository, const std::shared_ptr<TeamRepository>& teamRepository);
+    GroupDelegate(const std::shared_ptr<TournamentRepository>& tournamentRepository, const std::shared_ptr<GroupRepository>& groupRepository, const std::shared_ptr<TeamRepository>& teamRepository, const std::shared_ptr<IQueueMessageProducer>& messageProducer);
     std::expected<std::string, std::string> CreateGroup(const std::string_view& tournamentId, const domain::Group& group) override;
     std::expected<std::vector<domain::Group>, std::string> GetGroups(const std::string_view& tournamentId) override;
     std::expected<domain::Group, std::string> GetGroup(const std::string_view& tournamentId, const std::string_view& groupId) override;
@@ -23,8 +25,8 @@ public:
     std::expected<void, std::string> UpdateTeams(const std::string_view& tournamentId, const std::string_view& groupId, const std::vector<domain::Team>& teams) override;
 };
 
-GroupDelegate::GroupDelegate(const std::shared_ptr<TournamentRepository>& tournamentRepository, const std::shared_ptr<GroupRepository>& groupRepository, const std::shared_ptr<TeamRepository>& teamRepository)
-    : tournamentRepository(std::move(tournamentRepository)), groupRepository(std::move(groupRepository)), teamRepository(std::move(teamRepository)){}
+GroupDelegate::GroupDelegate(const std::shared_ptr<TournamentRepository>& tournamentRepository, const std::shared_ptr<GroupRepository>& groupRepository, const std::shared_ptr<TeamRepository>& teamRepository, const std::shared_ptr<IQueueMessageProducer>& messageProducer)
+    : tournamentRepository(std::move(tournamentRepository)), groupRepository(std::move(groupRepository)), teamRepository(std::move(teamRepository)), messageProducer(std::move(messageProducer)){}
 
 inline std::expected<std::string, std::string> GroupDelegate::CreateGroup(const std::string_view& tournamentId, const domain::Group& group) {
     auto tournament = tournamentRepository->ReadById(tournamentId.data());
@@ -139,6 +141,13 @@ inline std::expected<void, std::string> GroupDelegate::UpdateTeams(const std::st
             return std::unexpected(std::format("Team {} doesn't exist", team.Id));
         }
         groupRepository->UpdateGroupAddTeam(groupId, persistedTeam);
+
+        // Publish event for match generation
+        nlohmann::json message;
+        message["tournamentId"] = tournamentId;
+        message["groupId"] = groupId;
+        message["teamId"] = team.Id;
+        messageProducer->SendMessage(message.dump(), "tournament.team-add");
     }
     return {};
 }

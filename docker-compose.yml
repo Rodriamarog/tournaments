@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # ActiveMQ Classic Message Broker
+  activemq:
+    image: apache/activemq-classic:6.1.4
+    container_name: tournament-activemq
+    ports:
+      - "61616:61616"  # OpenWire protocol (C++ client)
+      - "8161:8161"    # Web console
+    environment:
+      - ACTIVEMQ_ADMIN_LOGIN=admin
+      - ACTIVEMQ_ADMIN_PASSWORD=admin
+    networks:
+      - tournament-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8161"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Tournament Services API (built separately)
+  # Run with: docker-compose up activemq
+  # Then build and run app with: ./build-and-test.sh && ./start.sh
+
+networks:
+  tournament-net:
+    driver: bridge

@@ -32,7 +32,7 @@ echo ""
 # Step 4: Run tests
 echo "🧪 Step 4/4: Running all tests..."
 echo "=========================================="
-docker run --rm -v "$(pwd):/workspace" -w /workspace tournament-build bash -c "
+docker run --rm --network=host -v "$(pwd):/workspace" -w /workspace tournament-build bash -c "
     cd build &&
     ctest --output-on-failure --verbose
 "

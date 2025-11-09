@@ -5,7 +5,8 @@ set(SERVICES_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/src/delegate/TeamDelegate.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/delegate/TournamentDelegate.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/controller/TournamentController.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/controller/TeamController.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/controller/TeamController.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/controller/MatchController.cpp)
 
 include(CTest)
 enable_testing()
@@ -14,6 +15,10 @@ find_package(Crow CONFIG REQUIRED)
 find_package(libpqxx CONFIG REQUIRED)
 find_path(HYPODERMIC_INCLUDE_DIRS "Hypodermic/ActivatedRegistrationInfo.h")
 find_package(nlohmann_json CONFIG REQUIRED)
+
+# Find ActiveMQ using pkg-config
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(ACTIVEMQ REQUIRED activemq-cpp)
 
 
 add_subdirectory(tests)
@@ -30,7 +35,21 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
         asio::asio
         nlohmann_json::nlohmann_json
         libpqxx::pqxx
-        tournament_common)
+        tournament_common
+        -Wl,--start-group
+        ${CMAKE_BINARY_DIR}/vcpkg_installed/x64-linux/lib/libpq.a
+        ${CMAKE_BINARY_DIR}/vcpkg_installed/x64-linux/lib/libpgcommon.a
+        ${CMAKE_BINARY_DIR}/vcpkg_installed/x64-linux/lib/libpgport.a
+        ${CMAKE_BINARY_DIR}/vcpkg_installed/x64-linux/lib/libssl.a
+        ${CMAKE_BINARY_DIR}/vcpkg_installed/x64-linux/lib/libcrypto.a
+        -Wl,--end-group
+        -ldl -lpthread)
+
+# Link ActiveMQ using pkg-config
+target_link_directories(${PROJECT_NAME} PRIVATE ${ACTIVEMQ_LIBRARY_DIRS})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${ACTIVEMQ_LIBRARIES})
+target_include_directories(${PROJECT_NAME} PRIVATE ${ACTIVEMQ_INCLUDE_DIRS})
+target_compile_options(${PROJECT_NAME} PRIVATE ${ACTIVEMQ_CFLAGS_OTHER})
 
 target_include_directories(${PROJECT_NAME} INTERFACE ${HYPODERMIC_INCLUDE_DIRS})
 

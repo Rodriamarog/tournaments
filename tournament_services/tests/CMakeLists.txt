@@ -4,11 +4,15 @@ set(TEST_SOURCES
         controller/TeamControllerTest.cpp
         controller/TournamentControllerTest.cpp
         controller/GroupControllerTest.cpp
+        controller/MatchControllerTest.cpp
         delegate/TeamDelegateTest.cpp
         delegate/TournamentDelegateTest.cpp
         delegate/GroupDelegateTest.cpp
+        delegate/MatchDelegateTest.cpp
+        repository/MatchRepositoryTest.cpp
         ../src/controller/TeamController.cpp
         ../src/controller/TournamentController.cpp
+        ../src/controller/MatchController.cpp
         ../src/delegate/TeamDelegate.cpp
         ../src/delegate/TournamentDelegate.cpp
 )
@@ -28,6 +32,15 @@ target_link_libraries(${PROJECT_NAME}_runner PRIVATE
         GTest::gtest_main
         GTest::gmock
         GTest::gmock_main
-        tournament_common)
+        tournament_common
+        libpqxx::pqxx
+        -Wl,--start-group
+        ${CMAKE_BINARY_DIR}/vcpkg_installed/x64-linux/lib/libpq.a
+        ${CMAKE_BINARY_DIR}/vcpkg_installed/x64-linux/lib/libpgcommon.a
+        ${CMAKE_BINARY_DIR}/vcpkg_installed/x64-linux/lib/libpgport.a
+        ${CMAKE_BINARY_DIR}/vcpkg_installed/x64-linux/lib/libssl.a
+        ${CMAKE_BINARY_DIR}/vcpkg_installed/x64-linux/lib/libcrypto.a
+        -Wl,--end-group
+        -ldl -lpthread)
 
 add_test(AllTestsInMain ${PROJECT_NAME}_runner)

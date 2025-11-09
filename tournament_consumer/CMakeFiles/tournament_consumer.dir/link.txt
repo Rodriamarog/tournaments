@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/tournament_consumer.dir/link.d CMakeFiles/tournament_consumer.dir/main.cpp.o -o tournament_consumer  ../build/vcpkg_installed/x64-linux/debug/lib/libpqxx-7.10.a ../tournament_common/libtournament_common.a ../build/vcpkg_installed/x64-linux/debug/lib/libpqxx-7.10.a ../build/vcpkg_installed/x64-linux/lib/libpq.a
