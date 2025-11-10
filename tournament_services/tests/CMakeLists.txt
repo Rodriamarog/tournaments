@@ -10,6 +10,8 @@ set(TEST_SOURCES
         delegate/GroupDelegateTest.cpp
         delegate/MatchDelegateTest.cpp
         repository/MatchRepositoryTest.cpp
+        service/MatchGenerationServiceTest.cpp
+        service/PlayoffGenerationServiceTest.cpp
         ../src/controller/TeamController.cpp
         ../src/controller/TournamentController.cpp
         ../src/controller/MatchController.cpp
