@@ -14,6 +14,7 @@
 // Mock repositories for testing
 class MockMatchRepository : public MatchRepository {
 public:
+    MockMatchRepository() : MatchRepository(nullptr) {}
     MOCK_METHOD(std::string, Create, (const domain::Match& match), (override));
     MOCK_METHOD(std::shared_ptr<domain::Match>, ReadById, (const std::string& id), (override));
     MOCK_METHOD(std::string, Update, (const domain::Match& match), (override));
@@ -27,6 +28,7 @@ public:
 
 class MockGroupRepository : public GroupRepository {
 public:
+    MockGroupRepository() : GroupRepository(nullptr) {}
     MOCK_METHOD(std::string, Create, (const domain::Group& group), (override));
     MOCK_METHOD(std::shared_ptr<domain::Group>, FindByTournamentIdAndGroupId, (const std::string_view& tournamentId, const std::string_view& groupId), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Group>>, FindByTournamentId, (const std::string_view& tournamentId), (override));
@@ -39,6 +41,7 @@ public:
 
 class MockTournamentRepository : public TournamentRepository {
 public:
+    MockTournamentRepository() : TournamentRepository(nullptr) {}
     MOCK_METHOD(std::string, Create, (const domain::Tournament& tournament), (override));
     MOCK_METHOD(std::shared_ptr<domain::Tournament>, ReadById, (const std::string& id), (override));
     MOCK_METHOD(std::string, Update, (const domain::Tournament& tournament), (override));
