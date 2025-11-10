@@ -12,6 +12,8 @@ set(TEST_SOURCES
         repository/MatchRepositoryTest.cpp
         service/MatchGenerationServiceTest.cpp
         service/PlayoffGenerationServiceTest.cpp
+        consumer/TeamAddedConsumerTest.cpp
+        consumer/ScoreRegisteredConsumerTest.cpp
         ../src/controller/TeamController.cpp
         ../src/controller/TournamentController.cpp
         ../src/controller/MatchController.cpp
