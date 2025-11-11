@@ -69,7 +69,7 @@ create_tournament() {
     print_info "  - 4 Groups"
     print_info "  - 4 Teams per group (16 teams total)"
 
-    RESPONSE=$(curl -s -X POST "$API_URL/tournaments" \
+    TOURNAMENT_ID=$(curl -s -i -X POST "$API_URL/tournaments" \
         -H "Content-Type: application/json" \
         -d '{
             "name": "World Cup 2025",
@@ -78,9 +78,7 @@ create_tournament() {
                 "numberOfGroups": 4,
                 "maxTeamsPerGroup": 4
             }
-        }')
-
-    TOURNAMENT_ID=$(echo $RESPONSE | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
+        }' | grep -i "^location:" | awk '{print $2}' | tr -d '\r')
 
     if [ -z "$TOURNAMENT_ID" ]; then
         print_error "Failed to create tournament"
@@ -110,11 +108,9 @@ create_teams() {
 
     print_info "Creating teams:"
     for TEAM_NAME in "${TEAM_NAMES[@]}"; do
-        RESPONSE=$(curl -s -X POST "$API_URL/teams" \
+        TEAM_ID=$(curl -s -i -X POST "$API_URL/teams" \
             -H "Content-Type: application/json" \
-            -d "{\"name\": \"$TEAM_NAME\"}")
-
-        TEAM_ID=$(echo $RESPONSE | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
+            -d "{\"name\": \"$TEAM_NAME\"}" | grep -i "^location:" | awk '{print $2}' | tr -d '\r')
         TEAM_IDS+=("$TEAM_ID")
 
         echo "  ✓ $TEAM_NAME (ID: $TEAM_ID)"
@@ -135,11 +131,9 @@ create_groups() {
     GROUP_NAMES=("Group A" "Group B" "Group C" "Group D")
 
     for GROUP_NAME in "${GROUP_NAMES[@]}"; do
-        RESPONSE=$(curl -s -X POST "$API_URL/tournaments/$TOURNAMENT_ID/groups" \
+        GROUP_ID=$(curl -s -i -X POST "$API_URL/tournaments/$TOURNAMENT_ID/groups" \
             -H "Content-Type: application/json" \
-            -d "{\"name\": \"$GROUP_NAME\"}")
-
-        GROUP_ID=$(echo $RESPONSE | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
+            -d "{\"name\": \"$GROUP_NAME\"}" | grep -i "^location:" | awk '{print $2}' | tr -d '\r')
         GROUP_IDS+=("$GROUP_ID")
 
         print_success "Created $GROUP_NAME (ID: $GROUP_ID)"
