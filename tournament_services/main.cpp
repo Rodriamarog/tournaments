@@ -2,8 +2,10 @@
 #include "include/configuration/ContainerSetup.hpp"
 #include "include/configuration/RunConfiguration.hpp"
 #include "include/configuration/RouteDefinition.hpp"
+#include <activemq/library/ActiveMQCPP.h>
 
 int main() {
+    activemq::library::ActiveMQCPP::initializeLibrary();
     const auto container = config::containerSetup();
     crow::SimpleApp app;
 

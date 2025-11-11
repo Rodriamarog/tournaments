@@ -15,6 +15,7 @@
 #include "persistence/repository/TeamRepository.hpp"
 #include "persistence/configuration/PostgresConnectionProvider.hpp"
 #include "persistence/repository/TournamentRepository.hpp"
+#include "cms/ConnectionManager.hpp"
 
 namespace config {
     inline std::shared_ptr<Hypodermic::Container> containerSetup() {
@@ -27,9 +28,15 @@ namespace config {
         std::shared_ptr<PostgresConnectionProvider> postgressConnection = std::make_shared<PostgresConnectionProvider>(configuration["databaseConfig"]["connectionString"].get<std::string>(), configuration["databaseConfig"]["poolSize"].get<size_t>());
         builder.registerInstance(postgressConnection).as<IDbConnectionProvider>();
 
-        // ActiveMQ dependencies removed - to be replaced with alternative message queue
-        // builder.registerType<ConnectionManager>()...
-        // builder.registerType<QueueMessageConsumer>()...
+        // Setup ActiveMQ connection
+        std::shared_ptr<ConnectionManager> connectionManager = std::make_shared<ConnectionManager>();
+        try {
+            connectionManager->initialize(configuration["messagingConfig"]["brokerURI"].get<std::string>());
+            builder.registerInstance(connectionManager);
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to initialize ActiveMQ connection: " << e.what() << std::endl;
+            throw;
+        }
 
         builder.registerType<TeamRepository>().as<IRepository<domain::Team, std::string_view>>().singleInstance();
 

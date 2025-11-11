@@ -45,8 +45,13 @@ namespace config {
 
         // Setup ActiveMQ connection
         std::shared_ptr<ConnectionManager> connectionManager = std::make_shared<ConnectionManager>();
-        connectionManager->initialize(configuration["messagingConfig"]["brokerURI"].get<std::string>());
-        builder.registerInstance(connectionManager);
+        try {
+            connectionManager->initialize(configuration["messagingConfig"]["brokerURI"].get<std::string>());
+            builder.registerInstance(connectionManager);
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to initialize ActiveMQ connection: " << e.what() << std::endl;
+            throw;
+        }
 
         builder.registerType<QueueMessageProducer>().as<IQueueMessageProducer>().singleInstance();
 

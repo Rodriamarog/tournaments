@@ -2,9 +2,9 @@
     "databaseConfig" : {
         "provider" : "postgres",
         "poolSize": 2,
-        "connectionString" : "postgresql://tournament_svc:password@tournament_db:5432/tournament_db"
+        "connectionString" : "postgresql://postgres:tournaments@db.lfurykknnlnawdczxifn.supabase.co:5432/postgres"
     },
-    "activemq": {
-        "broker-url" : "failover://(tcp://artemis:61616)"
+    "messagingConfig" : {
+        "brokerURI" : "tcp://localhost:61616"
     }
 }
