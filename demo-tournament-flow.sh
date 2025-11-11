@@ -158,28 +158,20 @@ add_teams_to_groups() {
 
         print_info "Adding teams to $GROUP_NAME:"
 
-        # Add 4 teams to each group
+        # Add 4 teams to each group (one at a time)
         START_IDX=$((i * 4))
-        TEAM_IDS_JSON="["
 
         for j in {0..3}; do
             TEAM_IDX=$((START_IDX + j))
             TEAM_ID="${TEAM_IDS[$TEAM_IDX]}"
 
-            if [ $j -gt 0 ]; then
-                TEAM_IDS_JSON+=","
-            fi
-            TEAM_IDS_JSON+="{\"id\":\"$TEAM_ID\"}"
-
             echo "  - Team ${TEAM_IDS[$TEAM_IDX]}"
+
+            # Add single team using POST
+            curl -s -X POST "$API_URL/tournaments/$TOURNAMENT_ID/groups/$GROUP_ID" \
+                -H "Content-Type: application/json" \
+                -d "{\"id\":\"$TEAM_ID\"}" > /dev/null
         done
-
-        TEAM_IDS_JSON+="]"
-
-        # Add all 4 teams at once
-        curl -s -X PUT "$API_URL/tournaments/$TOURNAMENT_ID/groups/$GROUP_ID/teams" \
-            -H "Content-Type: application/json" \
-            -d "$TEAM_IDS_JSON" > /dev/null
 
         print_success "Added 4 teams to $GROUP_NAME"
         echo ""
