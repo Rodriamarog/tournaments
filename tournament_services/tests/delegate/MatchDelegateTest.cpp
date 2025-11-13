@@ -97,7 +97,7 @@ TEST_F(MatchDelegateTest, GetMatches_NoFilter_ReturnsAllMatches) {
 
     EXPECT_CALL(*tournamentRepositoryMock, ReadById(tournamentId))
         .WillOnce(testing::Return(tournament));
-    EXPECT_CALL(*matchRepositoryMock, FindByTournamentId(testing::_))
+    EXPECT_CALL(*matchRepositoryMock, FindByTournamentId(tournamentId))
         .WillOnce(testing::Return(matches));
 
     // Act
@@ -122,7 +122,7 @@ TEST_F(MatchDelegateTest, GetMatches_FilteredByPlayed_ReturnsPlayedMatches) {
 
     EXPECT_CALL(*tournamentRepositoryMock, ReadById(tournamentId))
         .WillOnce(testing::Return(tournament));
-    EXPECT_CALL(*matchRepositoryMock, FindByTournamentIdAndStatus(testing::_, "played"))
+    EXPECT_CALL(*matchRepositoryMock, FindByTournamentIdAndStatus(tournamentId, "played"))
         .WillOnce(testing::Return(playedMatches));
 
     // Act
@@ -145,7 +145,7 @@ TEST_F(MatchDelegateTest, GetMatches_FilteredByPending_ReturnsPendingMatches) {
 
     EXPECT_CALL(*tournamentRepositoryMock, ReadById(tournamentId))
         .WillOnce(testing::Return(tournament));
-    EXPECT_CALL(*matchRepositoryMock, FindByTournamentIdAndStatus(testing::_, "pending"))
+    EXPECT_CALL(*matchRepositoryMock, FindByTournamentIdAndStatus(tournamentId, "pending"))
         .WillOnce(testing::Return(pendingMatches));
 
     // Act
@@ -251,9 +251,26 @@ TEST_F(MatchDelegateTest, UpdateScore_Success_UpdatesAndPublishesEvent) {
     EXPECT_CALL(*matchRepositoryMock, ReadById(matchId))
         .WillOnce(testing::Return(match));
     EXPECT_CALL(*matchRepositoryMock, Update(testing::_))
-        .WillOnce(testing::Return(matchId));
+        .WillOnce(testing::Invoke([&matchId](const domain::Match& updatedMatch) {
+            // Validate the match was updated correctly
+            EXPECT_EQ(updatedMatch.Status(), "played");
+            EXPECT_TRUE(updatedMatch.GetScore().has_value());
+            EXPECT_EQ(updatedMatch.GetScore().value().home, 2);
+            EXPECT_EQ(updatedMatch.GetScore().value().visitor, 1);
+            return matchId;
+        }));
     EXPECT_CALL(*messageProducerMock, SendMessage(testing::_, "tournament.score-registered"))
-        .Times(1);
+        .WillOnce(testing::Invoke([&tournamentId, &matchId](const std::string_view& message, const std::string_view& queue) {
+            // Validate the event payload contains all required fields
+            auto json = nlohmann::json::parse(message);
+            EXPECT_EQ(json["tournamentId"], tournamentId);
+            EXPECT_EQ(json["matchId"], matchId);
+            EXPECT_EQ(json["round"], "regular");
+            EXPECT_EQ(json["score"]["home"], 2);
+            EXPECT_EQ(json["score"]["visitor"], 1);
+            EXPECT_TRUE(json.contains("winnerId"));
+            EXPECT_EQ(json["winnerId"], "team1");  // team1 won 2-1
+        }));
 
     // Act
     auto result = matchDelegate->UpdateScore(tournamentId, matchId, score);

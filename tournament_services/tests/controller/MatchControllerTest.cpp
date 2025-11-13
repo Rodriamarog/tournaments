@@ -48,7 +48,7 @@ TEST_F(MatchControllerTest, GetMatches_Success_ReturnsMatches) {
     matches.push_back(CreateTestMatch("match1"));
     matches.push_back(CreateTestMatch("match2"));
 
-    EXPECT_CALL(*matchDelegateMock, GetMatches(testing::_, testing::Eq(std::nullopt)))
+    EXPECT_CALL(*matchDelegateMock, GetMatches("tournament-123", testing::Eq(std::nullopt)))
         .WillOnce(testing::Return(matches));
 
     crow::request request;
@@ -169,7 +169,7 @@ TEST_F(MatchControllerTest, GetMatch_Success_ReturnsMatch) {
     // Arrange
     domain::Match match = CreateTestMatch("match1");
 
-    EXPECT_CALL(*matchDelegateMock, GetMatch(testing::_, testing::_))
+    EXPECT_CALL(*matchDelegateMock, GetMatch("tournament-123", "match1"))
         .WillOnce(testing::Return(match));
 
     crow::request request;
@@ -187,7 +187,7 @@ TEST_F(MatchControllerTest, GetMatch_Success_ReturnsMatch) {
 // Test 8: GET single match - match not found
 TEST_F(MatchControllerTest, GetMatch_NotFound_ReturnsNotFound) {
     // Arrange
-    EXPECT_CALL(*matchDelegateMock, GetMatch(testing::_, testing::_))
+    EXPECT_CALL(*matchDelegateMock, GetMatch("tournament-123", "nonexistent"))
         .WillOnce(testing::Return(std::unexpected("Match doesn't exist")));
 
     crow::request request;
@@ -203,8 +203,13 @@ TEST_F(MatchControllerTest, GetMatch_NotFound_ReturnsNotFound) {
 // Test 9: PATCH update score - success
 TEST_F(MatchControllerTest, UpdateScore_Success_ReturnsNoContent) {
     // Arrange
-    EXPECT_CALL(*matchDelegateMock, UpdateScore(testing::_, testing::_, testing::_))
-        .WillOnce(testing::Return(std::expected<void, std::string>()));
+    EXPECT_CALL(*matchDelegateMock, UpdateScore("tournament-123", "match1", testing::_))
+        .WillOnce(testing::Invoke([](const std::string_view& tournamentId, const std::string_view& matchId, const domain::Score& score) {
+            // Validate the score object
+            EXPECT_EQ(score.home, 2);
+            EXPECT_EQ(score.visitor, 1);
+            return std::expected<void, std::string>();
+        }));
 
     crow::request request;
     request.url = "/tournaments/tournament-123/matches/match1";
