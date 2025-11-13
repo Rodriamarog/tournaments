@@ -1,3 +1,6 @@
+// This test suite uses GoogleTest + GoogleMock to validate the behavior of MatchDelegate.
+// We mock the repositories and the message producer to isolate business logic and avoid touching real databases or queues.
+
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <memory>
@@ -9,7 +12,12 @@
 #include "cms/IQueueMessageProducer.hpp"
 #include "delegate/MatchDelegate.hpp"
 
+// ---------------------------
 // Mock MatchRepository
+// ---------------------------
+// These mocks simulate the data layer. By replacing real repositories,
+// we can control the behavior of each method during the tests.
+// This helps us test MatchDelegate without depending on external storage.
 class MatchRepositoryMock : public MatchRepository {
 public:
     explicit MatchRepositoryMock() : MatchRepository(nullptr) {}
@@ -26,7 +34,11 @@ public:
     MOCK_METHOD(bool, ExistsByGroupId, (const std::string_view&), (override));
 };
 
+// ---------------------------
 // Mock TournamentRepository
+// ---------------------------
+// Same purpose as above: we fake repository behavior so we can test logic
+// without reaching a database.
 class TournamentRepositoryMock : public TournamentRepository {
 public:
     explicit TournamentRepositoryMock() : TournamentRepository(nullptr) {}
@@ -39,12 +51,20 @@ public:
     MOCK_METHOD(bool, ExistsByName, (const std::string& name), (override));
 };
 
-// Mock IQueueMessageProducer
+// ---------------------------
+// Mock Queue Producer
+// ---------------------------
+// Simulates the message broker used to notify other services.
+// By mocking this, we confirm that the event is sent at the right moment.
 class QueueMessageProducerMock : public IQueueMessageProducer {
 public:
     MOCK_METHOD(void, SendMessage, (const std::string_view& message, const std::string_view& queue), (override));
 };
 
+// ---------------------------
+// Test Fixture
+// ---------------------------
+// This class prepares a clean environment for each test run.
 class MatchDelegateTest : public ::testing::Test {
 protected:
     std::shared_ptr<MatchRepositoryMock> matchRepositoryMock;
@@ -52,6 +72,8 @@ protected:
     std::shared_ptr<QueueMessageProducerMock> messageProducerMock;
     std::shared_ptr<MatchDelegate> matchDelegate;
 
+    // This method runs before each test case.
+    // It initializes the mocks and injects them into MatchDelegate.
     void SetUp() override {
         matchRepositoryMock = std::make_shared<MatchRepositoryMock>();
         tournamentRepositoryMock = std::make_shared<TournamentRepositoryMock>();
@@ -63,6 +85,7 @@ protected:
         );
     }
 
+    // Helper function to create a fake tournament used by several tests.
     std::shared_ptr<domain::Tournament> CreateTestTournament(const std::string& id) {
         auto tournament = std::make_shared<domain::Tournament>();
         tournament->Id() = id;
@@ -72,6 +95,7 @@ protected:
         return tournament;
     }
 
+    // Helper function to create a fake match connected to a tournament.
     std::shared_ptr<domain::Match> CreateTestMatch(const std::string& id, const std::string& tournamentId) {
         auto match = std::make_shared<domain::Match>();
         match->Id() = id;
@@ -85,9 +109,12 @@ protected:
     }
 };
 
-// Test 1: GetMatches returns all matches when no filter is applied
+// ---------------------------
+// Test 1
+// ---------------------------
+// Validates that GetMatches returns all matches when no filter is provided.
 TEST_F(MatchDelegateTest, GetMatches_NoFilter_ReturnsAllMatches) {
-    // Arrange
+    // Arrange: fake tournament + two matches
     std::string tournamentId = "tournament-123";
     auto tournament = CreateTestTournament(tournamentId);
     auto match1 = CreateTestMatch("match1", tournamentId);
@@ -95,28 +122,32 @@ TEST_F(MatchDelegateTest, GetMatches_NoFilter_ReturnsAllMatches) {
 
     std::vector<std::shared_ptr<domain::Match>> matches = {match1, match2};
 
+    // Mock expectations: repository returns tournament and matches list
     EXPECT_CALL(*tournamentRepositoryMock, ReadById(tournamentId))
         .WillOnce(testing::Return(tournament));
     EXPECT_CALL(*matchRepositoryMock, FindByTournamentId(testing::_))
         .WillOnce(testing::Return(matches));
 
-    // Act
+    // Act: call the method we want to verify
     auto result = matchDelegate->GetMatches(tournamentId, std::nullopt);
 
-    // Assert
+    // Assert: confirm behavior and returned data
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(2, result.value().size());
     EXPECT_EQ("match1", result.value()[0].Id());
     EXPECT_EQ("match2", result.value()[1].Id());
 }
 
-// Test 2: GetMatches filters by "played" status
+// ---------------------------
+// Test 2
+// ---------------------------
+// Checks that only "played" matches are returned when using a filter.
 TEST_F(MatchDelegateTest, GetMatches_FilteredByPlayed_ReturnsPlayedMatches) {
     // Arrange
     std::string tournamentId = "tournament-123";
     auto tournament = CreateTestTournament(tournamentId);
     auto match1 = CreateTestMatch("match1", tournamentId);
-    match1->SetScore(domain::Score(2, 1));
+    match1->SetScore(domain::Score(2, 1));  // Score sets status to "played"
 
     std::vector<std::shared_ptr<domain::Match>> playedMatches = {match1};
 
@@ -134,7 +165,10 @@ TEST_F(MatchDelegateTest, GetMatches_FilteredByPlayed_ReturnsPlayedMatches) {
     EXPECT_EQ("played", result.value()[0].Status());
 }
 
-// Test 3: GetMatches filters by "pending" status
+// ---------------------------
+// Test 3
+// ---------------------------
+// Same as above but for "pending" matches.
 TEST_F(MatchDelegateTest, GetMatches_FilteredByPending_ReturnsPendingMatches) {
     // Arrange
     std::string tournamentId = "tournament-123";
@@ -157,9 +191,12 @@ TEST_F(MatchDelegateTest, GetMatches_FilteredByPending_ReturnsPendingMatches) {
     EXPECT_EQ("pending", result.value()[0].Status());
 }
 
-// Test 4: GetMatches returns error when tournament doesn't exist
+// ---------------------------
+// Test 4
+// ---------------------------
+// Ensures an error is returned when the tournament doesn't exist.
 TEST_F(MatchDelegateTest, GetMatches_TournamentNotFound_ReturnsError) {
-    // Arrange
+    // Arrange: repository returns null instead of a valid tournament
     std::string tournamentId = "nonexistent";
 
     EXPECT_CALL(*tournamentRepositoryMock, ReadById(tournamentId))
@@ -173,7 +210,10 @@ TEST_F(MatchDelegateTest, GetMatches_TournamentNotFound_ReturnsError) {
     EXPECT_EQ("Tournament doesn't exist", result.error());
 }
 
-// Test 5: GetMatch returns single match successfully
+// ---------------------------
+// Test 5
+// ---------------------------
+// Confirms that GetMatch returns a valid match when everything is correct.
 TEST_F(MatchDelegateTest, GetMatch_Success_ReturnsMatch) {
     // Arrange
     std::string tournamentId = "tournament-123";
@@ -195,9 +235,12 @@ TEST_F(MatchDelegateTest, GetMatch_Success_ReturnsMatch) {
     EXPECT_EQ(tournamentId, result.value().TournamentId());
 }
 
-// Test 6: GetMatch returns error when match not found
+// ---------------------------
+// Test 6
+// ---------------------------
+// Returns an error when the match ID doesn't exist.
 TEST_F(MatchDelegateTest, GetMatch_MatchNotFound_ReturnsError) {
-    // Arrange
+    // Arrange: match not found
     std::string tournamentId = "tournament-123";
     std::string matchId = "nonexistent";
     auto tournament = CreateTestTournament(tournamentId);
@@ -215,9 +258,12 @@ TEST_F(MatchDelegateTest, GetMatch_MatchNotFound_ReturnsError) {
     EXPECT_EQ("Match doesn't exist", result.error());
 }
 
-// Test 7: GetMatch returns error when match doesn't belong to tournament
+// ---------------------------
+// Test 7
+// ---------------------------
+// Validates that a match cannot belong to a different tournament.
 TEST_F(MatchDelegateTest, GetMatch_WrongTournament_ReturnsError) {
-    // Arrange
+    // Arrange: match belongs to another tournament
     std::string tournamentId = "tournament-123";
     std::string matchId = "match1";
     auto tournament = CreateTestTournament(tournamentId);
@@ -236,7 +282,16 @@ TEST_F(MatchDelegateTest, GetMatch_WrongTournament_ReturnsError) {
     EXPECT_EQ("Match doesn't belong to this tournament", result.error());
 }
 
-// Test 8: UpdateScore updates match successfully and publishes event
+// ---------------------------
+// Test 8
+// ---------------------------
+// This test validates the complete score update flow:
+// 1. Match is found
+// 2. Tournament exists
+// 3. Score is valid
+// 4. Status becomes "played"
+// 5. Repository updates the match
+// 6. A message is published
 TEST_F(MatchDelegateTest, UpdateScore_Success_UpdatesAndPublishesEvent) {
     // Arrange
     std::string tournamentId = "tournament-123";
@@ -252,6 +307,8 @@ TEST_F(MatchDelegateTest, UpdateScore_Success_UpdatesAndPublishesEvent) {
         .WillOnce(testing::Return(match));
     EXPECT_CALL(*matchRepositoryMock, Update(testing::_))
         .WillOnce(testing::Return(matchId));
+
+    // .Times(1) ensures the event is published once—important for avoiding duplicate messages.
     EXPECT_CALL(*messageProducerMock, SendMessage(testing::_, "tournament.score-registered"))
         .Times(1);
 
@@ -265,7 +322,10 @@ TEST_F(MatchDelegateTest, UpdateScore_Success_UpdatesAndPublishesEvent) {
     EXPECT_EQ(1, match->GetScore().value().visitor);
 }
 
-// Test 9: UpdateScore rejects ties
+// ---------------------------
+// Test 9
+// ---------------------------
+// Ensures ties are not accepted by business rules.
 TEST_F(MatchDelegateTest, UpdateScore_TieScore_ReturnsError) {
     // Arrange
     std::string tournamentId = "tournament-123";
@@ -288,7 +348,10 @@ TEST_F(MatchDelegateTest, UpdateScore_TieScore_ReturnsError) {
     EXPECT_EQ("Ties are not allowed", result.error());
 }
 
-// Test 10: UpdateScore rejects negative scores
+// ---------------------------
+// Test 10
+// ---------------------------
+// Validates that scores cannot contain negative numbers.
 TEST_F(MatchDelegateTest, UpdateScore_NegativeScore_ReturnsError) {
     // Arrange
     std::string tournamentId = "tournament-123";
@@ -311,7 +374,10 @@ TEST_F(MatchDelegateTest, UpdateScore_NegativeScore_ReturnsError) {
     EXPECT_EQ("Score cannot be negative", result.error());
 }
 
-// Test 11: UpdateScore returns error when tournament doesn't exist
+// ---------------------------
+// Test 11
+// ---------------------------
+// Error returned when tournament doesn't exist.
 TEST_F(MatchDelegateTest, UpdateScore_TournamentNotFound_ReturnsError) {
     // Arrange
     std::string tournamentId = "nonexistent";
@@ -329,7 +395,10 @@ TEST_F(MatchDelegateTest, UpdateScore_TournamentNotFound_ReturnsError) {
     EXPECT_EQ("Tournament doesn't exist", result.error());
 }
 
-// Test 12: UpdateScore returns error when match doesn't exist
+// ---------------------------
+// Test 12
+// ---------------------------
+// Confirms that the match must exist before updating its score.
 TEST_F(MatchDelegateTest, UpdateScore_MatchNotFound_ReturnsError) {
     // Arrange
     std::string tournamentId = "tournament-123";
