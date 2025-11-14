@@ -13,9 +13,9 @@ class MockMatchRepository : public MatchRepository {
 public:
     MockMatchRepository() : MatchRepository(nullptr) {}
     MOCK_METHOD(std::string, Create, (const domain::Match& match), (override));
-    MOCK_METHOD(std::shared_ptr<domain::Match>, ReadById, (const std::string& id), (override));
+    MOCK_METHOD(std::shared_ptr<domain::Match>, ReadById, (std::string id), (override));
     MOCK_METHOD(std::string, Update, (const domain::Match& match), (override));
-    MOCK_METHOD(void, Delete, (const std::string& id), (override));
+    MOCK_METHOD(void, Delete, (std::string id), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Match>>, FindByTournamentId, (const std::string_view& tournamentId), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Match>>, FindByTournamentIdAndStatus, (const std::string_view& tournamentId, const std::string& status), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Match>>, FindByGroupId, (const std::string_view& groupId), (override));
@@ -29,9 +29,9 @@ public:
     MOCK_METHOD(std::string, Create, (const domain::Group& group), (override));
     MOCK_METHOD(std::shared_ptr<domain::Group>, FindByTournamentIdAndGroupId, (const std::string_view& tournamentId, const std::string_view& groupId), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Group>>, FindByTournamentId, (const std::string_view& tournamentId), (override));
-    MOCK_METHOD(std::shared_ptr<domain::Group>, FindByTournamentIdAndTeamId, (const std::string_view& tournamentId, const std::string& teamId), (override));
+    MOCK_METHOD(std::shared_ptr<domain::Group>, FindByTournamentIdAndTeamId, (const std::string_view& tournamentId, const std::string_view& teamId), (override));
     MOCK_METHOD(std::string, Update, (const domain::Group& group), (override));
-    MOCK_METHOD(void, Delete, (const std::string& groupId), (override));
+    MOCK_METHOD(void, Delete, (std::string groupId), (override));
     MOCK_METHOD(bool, ExistsByName, (const std::string_view& tournamentId, const std::string& name), (override));
     MOCK_METHOD(void, UpdateGroupAddTeam, (const std::string_view& groupId, const std::shared_ptr<domain::Team>& team), (override));
 };
@@ -40,10 +40,10 @@ class MockTournamentRepository : public TournamentRepository {
 public:
     MockTournamentRepository() : TournamentRepository(nullptr) {}
     MOCK_METHOD(std::string, Create, (const domain::Tournament& tournament), (override));
-    MOCK_METHOD(std::shared_ptr<domain::Tournament>, ReadById, (const std::string& id), (override));
+    MOCK_METHOD(std::shared_ptr<domain::Tournament>, ReadById, (std::string id), (override));
     MOCK_METHOD(std::string, Update, (const domain::Tournament& tournament), (override));
-    MOCK_METHOD(void, Delete, (const std::string& id), (override));
-    MOCK_METHOD(std::vector<std::shared_ptr<domain::Tournament>>, FindAll, (), (override));
+    MOCK_METHOD(void, Delete, (std::string id), (override));
+    MOCK_METHOD(std::vector<std::shared_ptr<domain::Tournament>>, ReadAll, (), (override));
     MOCK_METHOD(bool, ExistsByName, (const std::string& name), (override));
 };
 
@@ -77,10 +77,9 @@ protected:
         auto tournament = std::make_shared<domain::Tournament>();
         tournament->Id() = "tournament-1";
         tournament->Name() = "Test Tournament";
-        tournament->Status() = "active";
 
         domain::TournamentFormat format;
-        format.Type() = "round-robin";
+        format.Type() = domain::TournamentType::ROUND_ROBIN;
         format.NumberOfGroups() = 4;
         format.MaxTeamsPerGroup() = 4;
         tournament->Format() = format;
@@ -171,21 +170,28 @@ TEST_F(ScoreRegisteredConsumerTest, ProcessEvent_LastRegularMatch_GeneratesQuart
         {"round", "regular"}
     };
 
-    // Check if all regular matches complete
+    // Check if all regular matches complete, then generate quarterfinals
     EXPECT_CALL(*mockMatchRepo, FindByTournamentIdAndRound("tournament-1", "regular"))
-        .WillOnce(testing::Return(allPlayed));
-
-    // Generate quarterfinals
+        .Times(2)
+        .WillRepeatedly(testing::Return(allPlayed));
     EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
         .WillOnce(testing::Return(tournament));
-    EXPECT_CALL(*mockMatchRepo, FindByTournamentIdAndRound("tournament-1", "regular"))
-        .WillOnce(testing::Return(allPlayed));
     EXPECT_CALL(*mockMatchRepo, FindByTournamentIdAndRound("tournament-1", "quarterfinals"))
         .WillOnce(testing::Return(noQuarterfinals));
     EXPECT_CALL(*mockGroupRepo, FindByTournamentId("tournament-1"))
         .WillOnce(testing::Return(groups));
     EXPECT_CALL(*mockMatchRepo, FindByGroupId(testing::_))
         .WillRepeatedly(testing::Return(allPlayed));
+
+    // Mock FindByTournamentIdAndGroupId to return the groups (needed for team data)
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "A"))
+        .WillOnce(testing::Return(groups[0]));
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "B"))
+        .WillOnce(testing::Return(groups[1]));
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "C"))
+        .WillOnce(testing::Return(groups[2]));
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "D"))
+        .WillOnce(testing::Return(groups[3]));
 
     // Expect 4 quarterfinal matches created
     EXPECT_CALL(*mockMatchRepo, Create(testing::_))

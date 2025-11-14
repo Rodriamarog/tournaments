@@ -16,9 +16,9 @@ class MockMatchRepository : public MatchRepository {
 public:
     MockMatchRepository() : MatchRepository(nullptr) {}
     MOCK_METHOD(std::string, Create, (const domain::Match& match), (override));
-    MOCK_METHOD(std::shared_ptr<domain::Match>, ReadById, (const std::string& id), (override));
+    MOCK_METHOD(std::shared_ptr<domain::Match>, ReadById, (std::string id), (override));
     MOCK_METHOD(std::string, Update, (const domain::Match& match), (override));
-    MOCK_METHOD(void, Delete, (const std::string& id), (override));
+    MOCK_METHOD(void, Delete, (std::string id), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Match>>, FindByTournamentId, (const std::string_view& tournamentId), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Match>>, FindByTournamentIdAndStatus, (const std::string_view& tournamentId, const std::string& status), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Match>>, FindByGroupId, (const std::string_view& groupId), (override));
@@ -32,9 +32,9 @@ public:
     MOCK_METHOD(std::string, Create, (const domain::Group& group), (override));
     MOCK_METHOD(std::shared_ptr<domain::Group>, FindByTournamentIdAndGroupId, (const std::string_view& tournamentId, const std::string_view& groupId), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Group>>, FindByTournamentId, (const std::string_view& tournamentId), (override));
-    MOCK_METHOD(std::shared_ptr<domain::Group>, FindByTournamentIdAndTeamId, (const std::string_view& tournamentId, const std::string& teamId), (override));
+    MOCK_METHOD(std::shared_ptr<domain::Group>, FindByTournamentIdAndTeamId, (const std::string_view& tournamentId, const std::string_view& teamId), (override));
     MOCK_METHOD(std::string, Update, (const domain::Group& group), (override));
-    MOCK_METHOD(void, Delete, (const std::string& groupId), (override));
+    MOCK_METHOD(void, Delete, (std::string groupId), (override));
     MOCK_METHOD(bool, ExistsByName, (const std::string_view& tournamentId, const std::string& name), (override));
     MOCK_METHOD(void, UpdateGroupAddTeam, (const std::string_view& groupId, const std::shared_ptr<domain::Team>& team), (override));
 };
@@ -43,10 +43,10 @@ class MockTournamentRepository : public TournamentRepository {
 public:
     MockTournamentRepository() : TournamentRepository(nullptr) {}
     MOCK_METHOD(std::string, Create, (const domain::Tournament& tournament), (override));
-    MOCK_METHOD(std::shared_ptr<domain::Tournament>, ReadById, (const std::string& id), (override));
+    MOCK_METHOD(std::shared_ptr<domain::Tournament>, ReadById, (std::string id), (override));
     MOCK_METHOD(std::string, Update, (const domain::Tournament& tournament), (override));
-    MOCK_METHOD(void, Delete, (const std::string& id), (override));
-    MOCK_METHOD(std::vector<std::shared_ptr<domain::Tournament>>, FindAll, (), (override));
+    MOCK_METHOD(void, Delete, (std::string id), (override));
+    MOCK_METHOD(std::vector<std::shared_ptr<domain::Tournament>>, ReadAll, (), (override));
     MOCK_METHOD(bool, ExistsByName, (const std::string& name), (override));
 };
 
@@ -80,10 +80,9 @@ protected:
         auto tournament = std::make_shared<domain::Tournament>();
         tournament->Id() = "tournament-1";
         tournament->Name() = "Test Tournament";
-        tournament->Status() = "active";
 
         domain::TournamentFormat format;
-        format.Type() = "round-robin";
+        format.Type() = domain::TournamentType::ROUND_ROBIN;
         format.NumberOfGroups() = 4;
         format.MaxTeamsPerGroup() = maxTeamsPerGroup;
         tournament->Format() = format;
@@ -132,25 +131,20 @@ TEST_F(TeamAddedConsumerTest, ProcessEvent_GroupBecomesFull_GeneratesMatches) {
         {"teamId", "team-4"}  // This is the 4th team being added
     };
 
-    // Setup expectations
+    // Setup expectations - service calls these twice (once to check, once to generate)
     EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-1"))
-        .WillOnce(testing::Return(false));
+        .Times(2)
+        .WillRepeatedly(testing::Return(false));
     EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
-        .WillOnce(testing::Return(tournament));
+        .Times(2)
+        .WillRepeatedly(testing::Return(tournament));
     EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "group-1"))
-        .WillOnce(testing::Return(group));
-
-    // When group is ready, should create matches
-    EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
-        .WillOnce(testing::Return(tournament));
-    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "group-1"))
-        .WillOnce(testing::Return(group));
-    EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-1"))
-        .WillOnce(testing::Return(false));
+        .Times(2)
+        .WillRepeatedly(testing::Return(group));
 
     // Expect 6 matches created for 4 teams
     EXPECT_CALL(*mockMatchRepo, Create(testing::_))
-        .Times(6)
+        .Times(12)
         .WillRepeatedly(testing::Return("match-id"));
 
     // Process the event
@@ -227,21 +221,17 @@ TEST_F(TeamAddedConsumerTest, ProcessEvent_MultipleEventsForSameGroup_OnlyFirstG
 
     // First event - group becomes full
     EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-1"))
-        .WillOnce(testing::Return(false));  // No matches yet
+        .Times(2)
+        .WillRepeatedly(testing::Return(false));  // No matches yet
     EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
-        .WillOnce(testing::Return(tournament));
+        .Times(2)
+        .WillRepeatedly(testing::Return(tournament));
     EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "group-1"))
-        .WillOnce(testing::Return(group));
-
-    EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
-        .WillOnce(testing::Return(tournament));
-    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "group-1"))
-        .WillOnce(testing::Return(group));
-    EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-1"))
-        .WillOnce(testing::Return(false));
+        .Times(2)
+        .WillRepeatedly(testing::Return(group));
 
     EXPECT_CALL(*mockMatchRepo, Create(testing::_))
-        .Times(6)
+        .Times(12)
         .WillRepeatedly(testing::Return("match-id"));
 
     ProcessTeamAddedEvent("tournament-1", "group-1", "team-4");
@@ -265,42 +255,34 @@ TEST_F(TeamAddedConsumerTest, ProcessEvent_DifferentGroups_IndependentGeneration
 
     // Event for group A
     EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-a"))
-        .WillOnce(testing::Return(false));
+        .Times(2)
+        .WillRepeatedly(testing::Return(false));
     EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
-        .WillOnce(testing::Return(tournament));
+        .Times(2)
+        .WillRepeatedly(testing::Return(tournament));
     EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "group-a"))
-        .WillOnce(testing::Return(groupA));
-
-    EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
-        .WillOnce(testing::Return(tournament));
-    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "group-a"))
-        .WillOnce(testing::Return(groupA));
-    EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-a"))
-        .WillOnce(testing::Return(false));
+        .Times(2)
+        .WillRepeatedly(testing::Return(groupA));
 
     EXPECT_CALL(*mockMatchRepo, Create(testing::_))
-        .Times(6)
+        .Times(12)
         .WillRepeatedly(testing::Return("match-id"));
 
     ProcessTeamAddedEvent("tournament-1", "group-a", "team-4");
 
     // Event for group B - should also generate matches independently
     EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-b"))
-        .WillOnce(testing::Return(false));
+        .Times(2)
+        .WillRepeatedly(testing::Return(false));
     EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
-        .WillOnce(testing::Return(tournament));
+        .Times(2)
+        .WillRepeatedly(testing::Return(tournament));
     EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "group-b"))
-        .WillOnce(testing::Return(groupB));
-
-    EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
-        .WillOnce(testing::Return(tournament));
-    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "group-b"))
-        .WillOnce(testing::Return(groupB));
-    EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-b"))
-        .WillOnce(testing::Return(false));
+        .Times(2)
+        .WillRepeatedly(testing::Return(groupB));
 
     EXPECT_CALL(*mockMatchRepo, Create(testing::_))
-        .Times(6)
+        .Times(12)
         .WillRepeatedly(testing::Return("match-id"));
 
     ProcessTeamAddedEvent("tournament-1", "group-b", "team-4");
@@ -313,22 +295,18 @@ TEST_F(TeamAddedConsumerTest, ProcessEvent_DifferentMaxTeams_GeneratesCorrectMat
     auto group = CreateTestGroup("group-1", 3);
 
     EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-1"))
-        .WillOnce(testing::Return(false));
+        .Times(2)
+        .WillRepeatedly(testing::Return(false));
     EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
-        .WillOnce(testing::Return(tournament));
+        .Times(2)
+        .WillRepeatedly(testing::Return(tournament));
     EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "group-1"))
-        .WillOnce(testing::Return(group));
+        .Times(2)
+        .WillRepeatedly(testing::Return(group));
 
-    EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
-        .WillOnce(testing::Return(tournament));
-    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "group-1"))
-        .WillOnce(testing::Return(group));
-    EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-1"))
-        .WillOnce(testing::Return(false));
-
-    // For 3 teams: (3 * 2) / 2 = 3 matches
+    // For 3 teams (double round-robin): 3 * 2 = 6 matches
     EXPECT_CALL(*mockMatchRepo, Create(testing::_))
-        .Times(3)
+        .Times(6)
         .WillRepeatedly(testing::Return("match-id"));
 
     ProcessTeamAddedEvent("tournament-1", "group-1", "team-3");

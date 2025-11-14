@@ -14,9 +14,9 @@ class MockMatchRepository : public MatchRepository {
 public:
     MockMatchRepository() : MatchRepository(nullptr) {}
     MOCK_METHOD(std::string, Create, (const domain::Match& match), (override));
-    MOCK_METHOD(std::shared_ptr<domain::Match>, ReadById, (const std::string& id), (override));
+    MOCK_METHOD(std::shared_ptr<domain::Match>, ReadById, (std::string id), (override));
     MOCK_METHOD(std::string, Update, (const domain::Match& match), (override));
-    MOCK_METHOD(void, Delete, (const std::string& id), (override));
+    MOCK_METHOD(void, Delete, (std::string id), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Match>>, FindByTournamentId, (const std::string_view& tournamentId), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Match>>, FindByTournamentIdAndStatus, (const std::string_view& tournamentId, const std::string& status), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Match>>, FindByGroupId, (const std::string_view& groupId), (override));
@@ -30,9 +30,9 @@ public:
     MOCK_METHOD(std::string, Create, (const domain::Group& group), (override));
     MOCK_METHOD(std::shared_ptr<domain::Group>, FindByTournamentIdAndGroupId, (const std::string_view& tournamentId, const std::string_view& groupId), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Group>>, FindByTournamentId, (const std::string_view& tournamentId), (override));
-    MOCK_METHOD(std::shared_ptr<domain::Group>, FindByTournamentIdAndTeamId, (const std::string_view& tournamentId, const std::string& teamId), (override));
+    MOCK_METHOD(std::shared_ptr<domain::Group>, FindByTournamentIdAndTeamId, (const std::string_view& tournamentId, const std::string_view& teamId), (override));
     MOCK_METHOD(std::string, Update, (const domain::Group& group), (override));
-    MOCK_METHOD(void, Delete, (const std::string& groupId), (override));
+    MOCK_METHOD(void, Delete, (std::string groupId), (override));
     MOCK_METHOD(bool, ExistsByName, (const std::string_view& tournamentId, const std::string& name), (override));
     MOCK_METHOD(void, UpdateGroupAddTeam, (const std::string_view& groupId, const std::shared_ptr<domain::Team>& team), (override));
 };
@@ -41,10 +41,10 @@ class MockTournamentRepository : public TournamentRepository {
 public:
     MockTournamentRepository() : TournamentRepository(nullptr) {}
     MOCK_METHOD(std::string, Create, (const domain::Tournament& tournament), (override));
-    MOCK_METHOD(std::shared_ptr<domain::Tournament>, ReadById, (const std::string& id), (override));
+    MOCK_METHOD(std::shared_ptr<domain::Tournament>, ReadById, (std::string id), (override));
     MOCK_METHOD(std::string, Update, (const domain::Tournament& tournament), (override));
-    MOCK_METHOD(void, Delete, (const std::string& id), (override));
-    MOCK_METHOD(std::vector<std::shared_ptr<domain::Tournament>>, FindAll, (), (override));
+    MOCK_METHOD(void, Delete, (std::string id), (override));
+    MOCK_METHOD(std::vector<std::shared_ptr<domain::Tournament>>, ReadAll, (), (override));
     MOCK_METHOD(bool, ExistsByName, (const std::string& name), (override));
 };
 
@@ -71,10 +71,9 @@ protected:
         auto tournament = std::make_shared<domain::Tournament>();
         tournament->Id() = "tournament-1";
         tournament->Name() = "Test Tournament";
-        tournament->Status() = "active";
 
         domain::TournamentFormat format;
-        format.Type() = "round-robin";
+        format.Type() = domain::TournamentType::ROUND_ROBIN;
         format.NumberOfGroups() = 4;
         format.MaxTeamsPerGroup() = 4;
         tournament->Format() = format;
@@ -168,65 +167,55 @@ TEST_F(PlayoffGenerationServiceTest, AreAllGroupMatchesCompleted_NoMatches_Retur
     EXPECT_FALSE(result);
 }
 
-// Test: GenerateQuarterfinals - Success generates 4 matches
+// Test: GenerateQuarterfinals - Success generates 4 matches with proper 1v8, 4v5, 2v7, 3v6 seeding
 TEST_F(PlayoffGenerationServiceTest, GenerateQuarterfinals_Success_Generates4Matches) {
     auto tournament = CreateTestTournament();
 
-    // Create 4 groups with teams
-    std::vector<std::shared_ptr<domain::Group>> groups = {
-        CreateTestGroup("A", 4),
-        CreateTestGroup("B", 4),
-        CreateTestGroup("C", 4),
-        CreateTestGroup("D", 4)
-    };
+    // Create 1 group with 16 teams (Round Robin format)
+    auto group = std::make_shared<domain::Group>();
+    group->Id() = "main-group";
+    group->TournamentId() = "tournament-1";
+    group->Name() = "Group A";
 
-    // Create realistic match results for each group to establish standings
-    // Group A: A-team-1 (1st), A-team-2 (2nd), A-team-3 (3rd), A-team-4 (4th)
-    std::vector<std::shared_ptr<domain::Match>> groupAMatches = {
-        CreateTestMatch("a1", "regular", "played", "A-team-1", "A-team-2", domain::Score{2, 0}),  // A1 wins
-        CreateTestMatch("a2", "regular", "played", "A-team-1", "A-team-3", domain::Score{3, 1}),  // A1 wins
-        CreateTestMatch("a3", "regular", "played", "A-team-1", "A-team-4", domain::Score{1, 0}),  // A1 wins (3 wins)
-        CreateTestMatch("a4", "regular", "played", "A-team-2", "A-team-3", domain::Score{2, 1}),  // A2 wins
-        CreateTestMatch("a5", "regular", "played", "A-team-2", "A-team-4", domain::Score{1, 0}),  // A2 wins (2 wins)
-        CreateTestMatch("a6", "regular", "played", "A-team-3", "A-team-4", domain::Score{2, 0})   // A3 wins (1 win)
-    };
+    // Create 16 teams with predictable IDs
+    std::vector<domain::Team> teams;
+    for (int i = 1; i <= 16; i++) {
+        domain::Team team;
+        team.Id = "team-" + std::to_string(i);
+        team.Name = "Team " + std::to_string(i);
+        teams.push_back(team);
+    }
+    group->Teams() = teams;
 
-    // Group B: B-team-1 (1st), B-team-2 (2nd)
-    std::vector<std::shared_ptr<domain::Match>> groupBMatches = {
-        CreateTestMatch("b1", "regular", "played", "B-team-1", "B-team-2", domain::Score{3, 0}),
-        CreateTestMatch("b2", "regular", "played", "B-team-1", "B-team-3", domain::Score{2, 1}),
-        CreateTestMatch("b3", "regular", "played", "B-team-1", "B-team-4", domain::Score{1, 0}),  // B1: 3 wins
-        CreateTestMatch("b4", "regular", "played", "B-team-2", "B-team-3", domain::Score{2, 0}),
-        CreateTestMatch("b5", "regular", "played", "B-team-2", "B-team-4", domain::Score{3, 1}),  // B2: 2 wins
-        CreateTestMatch("b6", "regular", "played", "B-team-3", "B-team-4", domain::Score{1, 0})
-    };
+    std::vector<std::shared_ptr<domain::Group>> groups = {group};
 
-    // Group C: C-team-1 (1st), C-team-2 (2nd)
-    std::vector<std::shared_ptr<domain::Match>> groupCMatches = {
-        CreateTestMatch("c1", "regular", "played", "C-team-1", "C-team-2", domain::Score{2, 1}),
-        CreateTestMatch("c2", "regular", "played", "C-team-1", "C-team-3", domain::Score{3, 0}),
-        CreateTestMatch("c3", "regular", "played", "C-team-1", "C-team-4", domain::Score{2, 0}),  // C1: 3 wins
-        CreateTestMatch("c4", "regular", "played", "C-team-2", "C-team-3", domain::Score{1, 0}),
-        CreateTestMatch("c5", "regular", "played", "C-team-2", "C-team-4", domain::Score{2, 1}),  // C2: 2 wins
-        CreateTestMatch("c6", "regular", "played", "C-team-3", "C-team-4", domain::Score{3, 2})
-    };
+    // Create matches with clear win records to establish ranking 1-16
+    // Team 1: 15 wins (plays teams 2-16, wins all)
+    // Team 2: 14 wins (loses to 1, beats 3-16)
+    // Team 3: 13 wins (loses to 1,2, beats 4-16)
+    // ... and so on
+    std::vector<std::shared_ptr<domain::Match>> allMatches;
+    int matchId = 1;
 
-    // Group D: D-team-1 (1st), D-team-2 (2nd)
-    std::vector<std::shared_ptr<domain::Match>> groupDMatches = {
-        CreateTestMatch("d1", "regular", "played", "D-team-1", "D-team-2", domain::Score{1, 0}),
-        CreateTestMatch("d2", "regular", "played", "D-team-1", "D-team-3", domain::Score{2, 0}),
-        CreateTestMatch("d3", "regular", "played", "D-team-1", "D-team-4", domain::Score{3, 1}),  // D1: 3 wins
-        CreateTestMatch("d4", "regular", "played", "D-team-2", "D-team-3", domain::Score{2, 1}),
-        CreateTestMatch("d5", "regular", "played", "D-team-2", "D-team-4", domain::Score{1, 0}),  // D2: 2 wins
-        CreateTestMatch("d6", "regular", "played", "D-team-3", "D-team-4", domain::Score{2, 1})
-    };
+    // Generate round-robin matches with predictable outcomes
+    for (int i = 1; i <= 16; i++) {
+        for (int j = i + 1; j <= 16; j++) {
+            std::string home = "team-" + std::to_string(i);
+            std::string visitor = "team-" + std::to_string(j);
 
-    // All regular matches combined for FindByTournamentIdAndRound
-    std::vector<std::shared_ptr<domain::Match>> allRegularMatches;
-    allRegularMatches.insert(allRegularMatches.end(), groupAMatches.begin(), groupAMatches.end());
-    allRegularMatches.insert(allRegularMatches.end(), groupBMatches.begin(), groupBMatches.end());
-    allRegularMatches.insert(allRegularMatches.end(), groupCMatches.begin(), groupCMatches.end());
-    allRegularMatches.insert(allRegularMatches.end(), groupDMatches.begin(), groupDMatches.end());
+            // Lower numbered team always wins (team-1 beats everyone, team-2 beats 3-16, etc.)
+            auto match = CreateTestMatch(
+                "m" + std::to_string(matchId++),
+                "regular",
+                "played",
+                home,
+                visitor,
+                domain::Score{2, 1}  // Home team wins
+            );
+            match->GroupId() = "main-group";
+            allMatches.push_back(match);
+        }
+    }
 
     // No existing quarterfinals
     std::vector<std::shared_ptr<domain::Match>> noQuarterfinals;
@@ -234,55 +223,53 @@ TEST_F(PlayoffGenerationServiceTest, GenerateQuarterfinals_Success_Generates4Mat
     EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
         .WillOnce(testing::Return(tournament));
     EXPECT_CALL(*mockMatchRepo, FindByTournamentIdAndRound("tournament-1", "regular"))
-        .WillOnce(testing::Return(allRegularMatches));
+        .WillOnce(testing::Return(allMatches));
     EXPECT_CALL(*mockMatchRepo, FindByTournamentIdAndRound("tournament-1", "quarterfinals"))
         .WillOnce(testing::Return(noQuarterfinals));
     EXPECT_CALL(*mockGroupRepo, FindByTournamentId("tournament-1"))
         .WillOnce(testing::Return(groups));
 
-    // Mock FindByGroupId for each group to return their specific matches
-    EXPECT_CALL(*mockMatchRepo, FindByGroupId("A"))
-        .WillOnce(testing::Return(groupAMatches));
-    EXPECT_CALL(*mockMatchRepo, FindByGroupId("B"))
-        .WillOnce(testing::Return(groupBMatches));
-    EXPECT_CALL(*mockMatchRepo, FindByGroupId("C"))
-        .WillOnce(testing::Return(groupCMatches));
-    EXPECT_CALL(*mockMatchRepo, FindByGroupId("D"))
-        .WillOnce(testing::Return(groupDMatches));
+    // Mock FindByGroupId to return all matches for the single group
+    EXPECT_CALL(*mockMatchRepo, FindByGroupId("main-group"))
+        .WillOnce(testing::Return(allMatches));
 
-    // Validate each quarterfinal match creation with correct seeding
-    // QF1: A1 vs D2
+    // Mock FindByTournamentIdAndGroupId to return the group
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "main-group"))
+        .WillOnce(testing::Return(group));
+
+    // Validate quarterfinal matchups with exact seeding: 1v8, 4v5, 2v7, 3v6
+    // QF1: 1 vs 8
     EXPECT_CALL(*mockMatchRepo, Create(testing::_))
         .WillOnce(testing::Invoke([](const domain::Match& match) {
             EXPECT_EQ(match.Round(), "quarterfinals");
             EXPECT_EQ(match.Status(), "pending");
             EXPECT_EQ(match.TournamentId(), "tournament-1");
-            EXPECT_EQ(match.Home().id, "A-team-1");
-            EXPECT_EQ(match.Visitor().id, "D-team-2");
+            EXPECT_EQ(match.Home().id, "team-1");
+            EXPECT_EQ(match.Visitor().id, "team-8");
             return "qf1";
         }))
-    // QF2: B1 vs C2
+    // QF2: 4 vs 5
         .WillOnce(testing::Invoke([](const domain::Match& match) {
             EXPECT_EQ(match.Round(), "quarterfinals");
             EXPECT_EQ(match.Status(), "pending");
-            EXPECT_EQ(match.Home().id, "B-team-1");
-            EXPECT_EQ(match.Visitor().id, "C-team-2");
+            EXPECT_EQ(match.Home().id, "team-4");
+            EXPECT_EQ(match.Visitor().id, "team-5");
             return "qf2";
         }))
-    // QF3: C1 vs B2
+    // QF3: 2 vs 7
         .WillOnce(testing::Invoke([](const domain::Match& match) {
             EXPECT_EQ(match.Round(), "quarterfinals");
             EXPECT_EQ(match.Status(), "pending");
-            EXPECT_EQ(match.Home().id, "C-team-1");
-            EXPECT_EQ(match.Visitor().id, "B-team-2");
+            EXPECT_EQ(match.Home().id, "team-2");
+            EXPECT_EQ(match.Visitor().id, "team-7");
             return "qf3";
         }))
-    // QF4: D1 vs A2
+    // QF4: 3 vs 6
         .WillOnce(testing::Invoke([](const domain::Match& match) {
             EXPECT_EQ(match.Round(), "quarterfinals");
             EXPECT_EQ(match.Status(), "pending");
-            EXPECT_EQ(match.Home().id, "D-team-1");
-            EXPECT_EQ(match.Visitor().id, "A-team-2");
+            EXPECT_EQ(match.Home().id, "team-3");
+            EXPECT_EQ(match.Visitor().id, "team-6");
             return "qf4";
         }));
 
@@ -348,7 +335,7 @@ TEST_F(PlayoffGenerationServiceTest, GenerateQuarterfinals_AlreadyExist_ReturnsE
     EXPECT_EQ(result.error(), "Quarterfinals already generated");
 }
 
-// Test: GenerateQuarterfinals - Not enough groups
+// Test: GenerateQuarterfinals - Not enough teams for playoffs
 TEST_F(PlayoffGenerationServiceTest, GenerateQuarterfinals_NotEnoughGroups_ReturnsError) {
     auto tournament = CreateTestTournament();
 
@@ -356,12 +343,22 @@ TEST_F(PlayoffGenerationServiceTest, GenerateQuarterfinals_NotEnoughGroups_Retur
         CreateTestMatch("m1", "regular", "played")
     };
 
-    // Only 2 groups instead of 4
-    std::vector<std::shared_ptr<domain::Group>> groups = {
-        CreateTestGroup("A", 4),
-        CreateTestGroup("B", 4)
-    };
+    // Create 1 group with only 6 teams (need 8 for playoffs)
+    auto group = std::make_shared<domain::Group>();
+    group->Id() = "main-group";
+    group->TournamentId() = "tournament-1";
+    group->Name() = "Group A";
 
+    std::vector<domain::Team> teams;
+    for (int i = 1; i <= 6; i++) {
+        domain::Team team;
+        team.Id = "team-" + std::to_string(i);
+        team.Name = "Team " + std::to_string(i);
+        teams.push_back(team);
+    }
+    group->Teams() = teams;
+
+    std::vector<std::shared_ptr<domain::Group>> groups = {group};
     std::vector<std::shared_ptr<domain::Match>> noQuarterfinals;
 
     EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
@@ -372,11 +369,15 @@ TEST_F(PlayoffGenerationServiceTest, GenerateQuarterfinals_NotEnoughGroups_Retur
         .WillOnce(testing::Return(noQuarterfinals));
     EXPECT_CALL(*mockGroupRepo, FindByTournamentId("tournament-1"))
         .WillOnce(testing::Return(groups));
+    EXPECT_CALL(*mockMatchRepo, FindByGroupId("main-group"))
+        .WillOnce(testing::Return(regularMatches));
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "main-group"))
+        .WillOnce(testing::Return(group));
 
     auto result = service->GenerateQuarterfinals("tournament-1");
 
     EXPECT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), "Tournament must have at least 4 groups for playoffs");
+    EXPECT_EQ(result.error(), "Not enough teams for playoffs (need 8)");
 }
 
 // Test: AdvanceWinners - Quarterfinals to Semifinals
@@ -469,11 +470,12 @@ TEST_F(PlayoffGenerationServiceTest, AdvanceWinners_InvalidRound_ReturnsError) {
 TEST_F(PlayoffGenerationServiceTest, AdvanceWinners_NotAllMatchesComplete_ReturnsSuccess) {
     auto tournament = CreateTestTournament();
 
-    // Only 3 of 4 quarterfinals completed
+    // All 4 quarterfinals exist but only 3 are played, 1 is still pending
     std::vector<std::shared_ptr<domain::Match>> quarterfinals = {
         CreateTestMatch("qf1", "quarterfinals", "played", "team-1", "team-2", domain::Score{2, 1}),
         CreateTestMatch("qf2", "quarterfinals", "played", "team-3", "team-4", domain::Score{3, 0}),
-        CreateTestMatch("qf3", "quarterfinals", "pending", "team-5", "team-6")
+        CreateTestMatch("qf3", "quarterfinals", "played", "team-5", "team-6", domain::Score{1, 0}),
+        CreateTestMatch("qf4", "quarterfinals", "pending", "team-7", "team-8")  // Still pending
     };
 
     EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
@@ -483,7 +485,7 @@ TEST_F(PlayoffGenerationServiceTest, AdvanceWinners_NotAllMatchesComplete_Return
 
     auto result = service->AdvanceWinners("tournament-1", "quarterfinals");
 
-    // Should return success but not create next round yet
+    // Should return success but not create next round yet (line 313: returns {} when not all played)
     EXPECT_TRUE(result.has_value());
 }
 

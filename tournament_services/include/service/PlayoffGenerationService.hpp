@@ -231,33 +231,42 @@ inline std::expected<void, std::string> PlayoffGenerationService::GenerateQuarte
         return std::unexpected("Quarterfinals already generated");
     }
 
-    // Get all groups
+    // Get all groups (Round Robin has 1 group of 16 teams)
     auto groups = groupRepository->FindByTournamentId(tournamentId);
-    if (groups.size() < 4) {
-        return std::unexpected("Tournament must have at least 4 groups for playoffs");
+    if (groups.empty()) {
+        return std::unexpected("No groups found for tournament");
     }
 
-    // Get top 2 teams from each group
-    std::vector<std::vector<domain::Team>> groupTopTeams;
+    // Calculate overall standings from all groups
+    std::vector<TeamStanding> allStandings;
     for (const auto& group : groups) {
-        auto standings = CalculateGroupStandings(tournamentId, group->Id());
-        auto topTeams = GetTopTeams(standings, 2);  // Top 2 teams
-        groupTopTeams.push_back(topTeams);
+        auto groupStandings = CalculateGroupStandings(tournamentId, group->Id());
+        allStandings.insert(allStandings.end(), groupStandings.begin(), groupStandings.end());
     }
 
-    // Generate quarterfinal matchups (example seeding):
-    // QF1: Group A 1st vs Group D 2nd
-    // QF2: Group B 1st vs Group C 2nd
-    // QF3: Group C 1st vs Group B 2nd
-    // QF4: Group D 1st vs Group A 2nd
+    // Sort all teams by overall standing
+    std::sort(allStandings.begin(), allStandings.end(), [](const TeamStanding& a, const TeamStanding& b) {
+        if (a.wins != b.wins) return a.wins > b.wins;
+        if (a.goalDifference != b.goalDifference) return a.goalDifference > b.goalDifference;
+        return a.goalsFor > b.goalsFor;
+    });
 
+    // Get top 8 teams for playoffs
+    auto topEight = GetTopTeams(allStandings, 8);
+    if (topEight.size() < 8) {
+        return std::unexpected("Not enough teams for playoffs (need 8)");
+    }
+
+    // Generate quarterfinal matchups with proper seeding (as per spec):
+    // QF1: 1 vs 8
+    // QF2: 4 vs 5
+    // QF3: 2 vs 7
+    // QF4: 3 vs 6
     std::vector<std::pair<domain::Team, domain::Team>> quarterfinalPairs;
-    if (groupTopTeams.size() >= 4) {
-        quarterfinalPairs.push_back({groupTopTeams[0][0], groupTopTeams[3][1]});  // A1 vs D2
-        quarterfinalPairs.push_back({groupTopTeams[1][0], groupTopTeams[2][1]});  // B1 vs C2
-        quarterfinalPairs.push_back({groupTopTeams[2][0], groupTopTeams[1][1]});  // C1 vs B2
-        quarterfinalPairs.push_back({groupTopTeams[3][0], groupTopTeams[0][1]});  // D1 vs A2
-    }
+    quarterfinalPairs.push_back({topEight[0], topEight[7]});  // 1 vs 8
+    quarterfinalPairs.push_back({topEight[3], topEight[4]});  // 4 vs 5
+    quarterfinalPairs.push_back({topEight[1], topEight[6]});  // 2 vs 7
+    quarterfinalPairs.push_back({topEight[2], topEight[5]});  // 3 vs 6
 
     // Create quarterfinal matches
     for (size_t i = 0; i < quarterfinalPairs.size(); i++) {

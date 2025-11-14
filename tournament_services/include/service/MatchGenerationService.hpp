@@ -117,7 +117,8 @@ inline bool MatchGenerationService::IsGroupReadyForMatches(
 }
 
 inline int MatchGenerationService::CalculateMatchCount(int teamCount) const {
-    return (teamCount * (teamCount - 1)) / 2;
+    // Double round-robin: each team plays every other team twice (home & away)
+    return teamCount * (teamCount - 1);
 }
 
 inline std::expected<void, std::string> MatchGenerationService::GenerateRoundRobinMatches(
@@ -155,9 +156,11 @@ inline std::expected<void, std::string> MatchGenerationService::GenerateRoundRob
         return std::unexpected("Group is not full yet. Cannot generate matches.");
     }
 
-    // Generate round-robin matches: each team plays every other team once
+    // Generate double round-robin matches: each team plays every other team twice (home & away)
     for (size_t i = 0; i < teams.size(); i++) {
-        for (size_t j = i + 1; j < teams.size(); j++) {
+        for (size_t j = 0; j < teams.size(); j++) {
+            if (i == j) continue;  // Team doesn't play itself
+
             domain::Match match;
 
             // Generate unique match ID (could use UUID in production)
@@ -168,7 +171,7 @@ inline std::expected<void, std::string> MatchGenerationService::GenerateRoundRob
             match.TournamentId() = std::string(tournamentId);
             match.GroupId() = std::string(groupId);
 
-            // Set home and visitor teams
+            // Set home and visitor teams (i is always home)
             match.Home() = domain::MatchTeam(teams[i].Id, teams[i].Name);
             match.Visitor() = domain::MatchTeam(teams[j].Id, teams[j].Name);
 

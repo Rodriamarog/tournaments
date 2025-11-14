@@ -125,14 +125,17 @@ inline std::expected<void, std::string> MatchDelegate::UpdateScore(
         return std::unexpected("Match doesn't belong to this tournament");
     }
 
-    // Validate score (no ties allowed in any round for round-robin)
-    if (score.home == score.visitor) {
-        return std::unexpected("Ties are not allowed");
-    }
-
-    // Validate score is non-negative
+    // Validate score range (0-10 as per spec)
     if (score.home < 0 || score.visitor < 0) {
         return std::unexpected("Score cannot be negative");
+    }
+    if (score.home > 10 || score.visitor > 10) {
+        return std::unexpected("Score must be between 0 and 10");
+    }
+
+    // Validate ties: allowed in regular season, not allowed in playoffs
+    if (score.home == score.visitor && matchPtr->Round() != "regular") {
+        return std::unexpected("Ties are not allowed in playoff rounds");
     }
 
     // Update match with score

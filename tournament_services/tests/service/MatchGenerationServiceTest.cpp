@@ -14,9 +14,9 @@ class MockMatchRepository : public MatchRepository {
 public:
     MockMatchRepository() : MatchRepository(nullptr) {}
     MOCK_METHOD(std::string, Create, (const domain::Match& match), (override));
-    MOCK_METHOD(std::shared_ptr<domain::Match>, ReadById, (const std::string& id), (override));
+    MOCK_METHOD(std::shared_ptr<domain::Match>, ReadById, (std::string id), (override));
     MOCK_METHOD(std::string, Update, (const domain::Match& match), (override));
-    MOCK_METHOD(void, Delete, (const std::string& id), (override));
+    MOCK_METHOD(void, Delete, (std::string id), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Match>>, FindByTournamentId, (const std::string_view& tournamentId), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Match>>, FindByTournamentIdAndStatus, (const std::string_view& tournamentId, const std::string& status), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Match>>, FindByGroupId, (const std::string_view& groupId), (override));
@@ -30,9 +30,9 @@ public:
     MOCK_METHOD(std::string, Create, (const domain::Group& group), (override));
     MOCK_METHOD(std::shared_ptr<domain::Group>, FindByTournamentIdAndGroupId, (const std::string_view& tournamentId, const std::string_view& groupId), (override));
     MOCK_METHOD(std::vector<std::shared_ptr<domain::Group>>, FindByTournamentId, (const std::string_view& tournamentId), (override));
-    MOCK_METHOD(std::shared_ptr<domain::Group>, FindByTournamentIdAndTeamId, (const std::string_view& tournamentId, const std::string& teamId), (override));
+    MOCK_METHOD(std::shared_ptr<domain::Group>, FindByTournamentIdAndTeamId, (const std::string_view& tournamentId, const std::string_view& teamId), (override));
     MOCK_METHOD(std::string, Update, (const domain::Group& group), (override));
-    MOCK_METHOD(void, Delete, (const std::string& groupId), (override));
+    MOCK_METHOD(void, Delete, (std::string groupId), (override));
     MOCK_METHOD(bool, ExistsByName, (const std::string_view& tournamentId, const std::string& name), (override));
     MOCK_METHOD(void, UpdateGroupAddTeam, (const std::string_view& groupId, const std::shared_ptr<domain::Team>& team), (override));
 };
@@ -41,10 +41,10 @@ class MockTournamentRepository : public TournamentRepository {
 public:
     MockTournamentRepository() : TournamentRepository(nullptr) {}
     MOCK_METHOD(std::string, Create, (const domain::Tournament& tournament), (override));
-    MOCK_METHOD(std::shared_ptr<domain::Tournament>, ReadById, (const std::string& id), (override));
+    MOCK_METHOD(std::shared_ptr<domain::Tournament>, ReadById, (std::string id), (override));
     MOCK_METHOD(std::string, Update, (const domain::Tournament& tournament), (override));
-    MOCK_METHOD(void, Delete, (const std::string& id), (override));
-    MOCK_METHOD(std::vector<std::shared_ptr<domain::Tournament>>, FindAll, (), (override));
+    MOCK_METHOD(void, Delete, (std::string id), (override));
+    MOCK_METHOD(std::vector<std::shared_ptr<domain::Tournament>>, ReadAll, (), (override));
     MOCK_METHOD(bool, ExistsByName, (const std::string& name), (override));
 };
 
@@ -71,10 +71,9 @@ protected:
         auto tournament = std::make_shared<domain::Tournament>();
         tournament->Id() = "tournament-1";
         tournament->Name() = "Test Tournament";
-        tournament->Status() = "active";
 
         domain::TournamentFormat format;
-        format.Type() = "round-robin";
+        format.Type() = domain::TournamentType::ROUND_ROBIN;
         format.NumberOfGroups() = 4;
         format.MaxTeamsPerGroup() = maxTeamsPerGroup;
         tournament->Format() = format;
@@ -174,7 +173,7 @@ TEST_F(MatchGenerationServiceTest, IsGroupReadyForMatches_GroupNotFound_ReturnsF
     EXPECT_FALSE(result);
 }
 
-// Test: GenerateRoundRobinMatches - Success for 4 teams (generates 6 matches)
+// Test: GenerateRoundRobinMatches - Success for 4 teams (generates 12 matches - double round-robin)
 TEST_F(MatchGenerationServiceTest, GenerateRoundRobinMatches_FourTeams_Generates6Matches) {
     auto tournament = CreateTestTournament(4);
     auto group = CreateTestGroup("group-1", 4);
@@ -186,9 +185,9 @@ TEST_F(MatchGenerationServiceTest, GenerateRoundRobinMatches_FourTeams_Generates
     EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-1"))
         .WillOnce(testing::Return(false));
 
-    // Expect 6 matches created: (4 * 3) / 2 = 6
+    // Expect 12 matches created for double round-robin: 4 * 3 = 12
     EXPECT_CALL(*mockMatchRepo, Create(testing::_))
-        .Times(6)
+        .Times(12)
         .WillRepeatedly(testing::Return("match-id"));
 
     auto result = service->GenerateRoundRobinMatches("tournament-1", "group-1");
@@ -196,7 +195,7 @@ TEST_F(MatchGenerationServiceTest, GenerateRoundRobinMatches_FourTeams_Generates
     EXPECT_TRUE(result.has_value());
 }
 
-// Test: GenerateRoundRobinMatches - Success for 3 teams (generates 3 matches)
+// Test: GenerateRoundRobinMatches - Success for 3 teams (generates 6 matches - double round-robin)
 TEST_F(MatchGenerationServiceTest, GenerateRoundRobinMatches_ThreeTeams_Generates3Matches) {
     auto tournament = CreateTestTournament(3);
     auto group = CreateTestGroup("group-1", 3);
@@ -208,9 +207,9 @@ TEST_F(MatchGenerationServiceTest, GenerateRoundRobinMatches_ThreeTeams_Generate
     EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-1"))
         .WillOnce(testing::Return(false));
 
-    // Expect 3 matches: (3 * 2) / 2 = 3
+    // Expect 6 matches for double round-robin: 3 * 2 = 6
     EXPECT_CALL(*mockMatchRepo, Create(testing::_))
-        .Times(3)
+        .Times(6)
         .WillRepeatedly(testing::Return("match-id"));
 
     auto result = service->GenerateRoundRobinMatches("tournament-1", "group-1");
@@ -309,10 +308,10 @@ TEST_F(MatchGenerationServiceTest, GenerateRoundRobinMatches_ValidatesMatchStruc
     EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-1"))
         .WillOnce(testing::Return(false));
 
-    // Capture and validate created matches
+    // Capture and validate created matches (double round-robin: 4 * 3 = 12 matches)
     std::vector<domain::Match> createdMatches;
     EXPECT_CALL(*mockMatchRepo, Create(testing::_))
-        .Times(6)
+        .Times(12)
         .WillRepeatedly([&createdMatches](const domain::Match& match) {
             createdMatches.push_back(match);
             return "match-id";
@@ -321,7 +320,7 @@ TEST_F(MatchGenerationServiceTest, GenerateRoundRobinMatches_ValidatesMatchStruc
     auto result = service->GenerateRoundRobinMatches("tournament-1", "group-1");
 
     EXPECT_TRUE(result.has_value());
-    EXPECT_EQ(createdMatches.size(), 6);
+    EXPECT_EQ(createdMatches.size(), 12);
 
     // Validate all matches have correct properties
     for (const auto& match : createdMatches) {

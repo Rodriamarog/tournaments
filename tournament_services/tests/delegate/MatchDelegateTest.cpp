@@ -282,15 +282,16 @@ TEST_F(MatchDelegateTest, UpdateScore_Success_UpdatesAndPublishesEvent) {
     EXPECT_EQ(1, match->GetScore().value().visitor);
 }
 
-// Test 9: UpdateScore rejects ties
+// Test 9: UpdateScore rejects ties in playoff matches but allows in regular season
 TEST_F(MatchDelegateTest, UpdateScore_TieScore_ReturnsError) {
-    // Arrange
+    // Arrange - playoff match
     std::string tournamentId = "tournament-123";
     std::string matchId = "match1";
     domain::Score tieScore(1, 1);
 
     auto tournament = CreateTestTournament(tournamentId);
     auto match = CreateTestMatch(matchId, tournamentId);
+    match->Round() = "quarterfinals";  // Playoff match
 
     EXPECT_CALL(*tournamentRepositoryMock, ReadById(tournamentId))
         .WillOnce(testing::Return(tournament));
@@ -302,7 +303,7 @@ TEST_F(MatchDelegateTest, UpdateScore_TieScore_ReturnsError) {
 
     // Assert
     ASSERT_FALSE(result.has_value());
-    EXPECT_EQ("Ties are not allowed", result.error());
+    EXPECT_EQ("Ties are not allowed in playoff rounds", result.error());
 }
 
 // Test 10: UpdateScore rejects negative scores
@@ -328,7 +329,59 @@ TEST_F(MatchDelegateTest, UpdateScore_NegativeScore_ReturnsError) {
     EXPECT_EQ("Score cannot be negative", result.error());
 }
 
-// Test 11: UpdateScore returns error when tournament doesn't exist
+// Test 11: UpdateScore allows ties in regular season matches
+TEST_F(MatchDelegateTest, UpdateScore_TieInRegularSeason_Succeeds) {
+    // Arrange
+    std::string tournamentId = "tournament-123";
+    std::string matchId = "match1";
+    domain::Score tieScore(2, 2);
+
+    auto tournament = CreateTestTournament(tournamentId);
+    auto match = CreateTestMatch(matchId, tournamentId);  // Regular round match
+
+    EXPECT_CALL(*tournamentRepositoryMock, ReadById(tournamentId))
+        .WillOnce(testing::Return(tournament));
+    EXPECT_CALL(*matchRepositoryMock, ReadById(matchId))
+        .WillOnce(testing::Return(match));
+    EXPECT_CALL(*matchRepositoryMock, Update(testing::_))
+        .WillOnce(testing::Return("match1"));
+    EXPECT_CALL(*messageProducerMock, SendMessage(testing::_, "tournament.score-registered"))
+        .Times(1);
+
+    // Act
+    auto result = matchDelegate->UpdateScore(tournamentId, matchId, tieScore);
+
+    // Assert
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ("played", match->Status());
+    EXPECT_EQ(2, match->GetScore().value().home);
+    EXPECT_EQ(2, match->GetScore().value().visitor);
+}
+
+// Test 12: UpdateScore rejects scores greater than 10
+TEST_F(MatchDelegateTest, UpdateScore_ScoreGreaterThan10_ReturnsError) {
+    // Arrange
+    std::string tournamentId = "tournament-123";
+    std::string matchId = "match1";
+    domain::Score invalidScore(11, 5);
+
+    auto tournament = CreateTestTournament(tournamentId);
+    auto match = CreateTestMatch(matchId, tournamentId);
+
+    EXPECT_CALL(*tournamentRepositoryMock, ReadById(tournamentId))
+        .WillOnce(testing::Return(tournament));
+    EXPECT_CALL(*matchRepositoryMock, ReadById(matchId))
+        .WillOnce(testing::Return(match));
+
+    // Act
+    auto result = matchDelegate->UpdateScore(tournamentId, matchId, invalidScore);
+
+    // Assert
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ("Score must be between 0 and 10", result.error());
+}
+
+// Test 13: UpdateScore returns error when tournament doesn't exist
 TEST_F(MatchDelegateTest, UpdateScore_TournamentNotFound_ReturnsError) {
     // Arrange
     std::string tournamentId = "nonexistent";

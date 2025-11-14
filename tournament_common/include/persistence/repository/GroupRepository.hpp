@@ -33,9 +33,9 @@ public:
     virtual bool ExistsByName(const std::string_view& tournamentId, const std::string& name);
 };
 
-GroupRepository::GroupRepository(const std::shared_ptr<IDbConnectionProvider>& connectionProvider) : connectionProvider(std::move(connectionProvider)) {}
+inline GroupRepository::GroupRepository(const std::shared_ptr<IDbConnectionProvider>& connectionProvider) : connectionProvider(std::move(connectionProvider)) {}
 
-std::shared_ptr<domain::Group> GroupRepository::ReadById(std::string id) {
+inline std::shared_ptr<domain::Group> GroupRepository::ReadById(std::string id) {
     auto pooled = connectionProvider->Connection();
     auto connection = dynamic_cast<PostgresConnection*>(&*pooled);
 
@@ -56,7 +56,7 @@ std::shared_ptr<domain::Group> GroupRepository::ReadById(std::string id) {
     return group;
 }
 
-std::string GroupRepository::Create (const domain::Group & entity) {
+inline std::string GroupRepository::Create (const domain::Group & entity) {
     auto pooled = connectionProvider->Connection();
     auto connection = dynamic_cast<PostgresConnection*>(&*pooled);
     nlohmann::json groupBody;
@@ -70,7 +70,7 @@ std::string GroupRepository::Create (const domain::Group & entity) {
     return result[0]["id"].c_str();
 }
 
-std::string GroupRepository::Update (const domain::Group & entity) {
+inline std::string GroupRepository::Update (const domain::Group & entity) {
     auto pooled = connectionProvider->Connection();
     auto connection = dynamic_cast<PostgresConnection*>(&*pooled);
     nlohmann::json groupBody;
@@ -89,11 +89,11 @@ std::string GroupRepository::Update (const domain::Group & entity) {
     return result[0]["id"].c_str();
 }
 
-void GroupRepository::Delete(std::string id) {
+inline void GroupRepository::Delete(std::string id) {
 
 }
 
-std::vector<std::shared_ptr<domain::Group>> GroupRepository::ReadAll() {
+inline std::vector<std::shared_ptr<domain::Group>> GroupRepository::ReadAll() {
     std::vector<std::shared_ptr<domain::Group>> teams;
 
     auto pooled = connectionProvider->Connection();
