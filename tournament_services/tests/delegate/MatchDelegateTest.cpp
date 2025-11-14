@@ -298,6 +298,12 @@ TEST_F(MatchDelegateTest, UpdateScore_TieScore_ReturnsError) {
     EXPECT_CALL(*matchRepositoryMock, ReadById(matchId))
         .WillOnce(testing::Return(match));
 
+    // Validate that Update and SendMessage are NOT called on validation error
+    EXPECT_CALL(*matchRepositoryMock, Update(testing::_))
+        .Times(0);
+    EXPECT_CALL(*messageProducerMock, SendMessage(testing::_, testing::_))
+        .Times(0);
+
     // Act
     auto result = matchDelegate->UpdateScore(tournamentId, matchId, tieScore);
 
@@ -344,9 +350,26 @@ TEST_F(MatchDelegateTest, UpdateScore_TieInRegularSeason_Succeeds) {
     EXPECT_CALL(*matchRepositoryMock, ReadById(matchId))
         .WillOnce(testing::Return(match));
     EXPECT_CALL(*matchRepositoryMock, Update(testing::_))
-        .WillOnce(testing::Return("match1"));
+        .WillOnce(testing::Invoke([&matchId](const domain::Match& updatedMatch) {
+            // Validate the match was updated correctly with tie score
+            EXPECT_EQ(updatedMatch.Status(), "played");
+            EXPECT_TRUE(updatedMatch.GetScore().has_value());
+            EXPECT_EQ(updatedMatch.GetScore().value().home, 2);
+            EXPECT_EQ(updatedMatch.GetScore().value().visitor, 2);
+            return matchId;
+        }));
     EXPECT_CALL(*messageProducerMock, SendMessage(testing::_, "tournament.score-registered"))
-        .Times(1);
+        .WillOnce(testing::Invoke([&tournamentId, &matchId](const std::string_view& message, const std::string_view& queue) {
+            // Validate the event payload contains all required fields for a tie game
+            auto json = nlohmann::json::parse(message);
+            EXPECT_EQ(json["tournamentId"], tournamentId);
+            EXPECT_EQ(json["matchId"], matchId);
+            EXPECT_EQ(json["round"], "regular");
+            EXPECT_EQ(json["score"]["home"], 2);
+            EXPECT_EQ(json["score"]["visitor"], 2);
+            // Tie game - winnerId should be empty string
+            EXPECT_EQ(json["winnerId"], "");
+        }));
 
     // Act
     auto result = matchDelegate->UpdateScore(tournamentId, matchId, tieScore);
@@ -435,9 +458,26 @@ TEST_F(MatchDelegateTest, UpdateScore_MaximumValidScore_Succeeds) {
     EXPECT_CALL(*matchRepositoryMock, ReadById(matchId))
         .WillOnce(testing::Return(match));
     EXPECT_CALL(*matchRepositoryMock, Update(testing::_))
-        .WillOnce(testing::Return("match1"));
+        .WillOnce(testing::Invoke([&matchId](const domain::Match& updatedMatch) {
+            // Validate maximum valid score (10-10) is handled correctly
+            EXPECT_EQ(updatedMatch.Status(), "played");
+            EXPECT_TRUE(updatedMatch.GetScore().has_value());
+            EXPECT_EQ(updatedMatch.GetScore().value().home, 10);
+            EXPECT_EQ(updatedMatch.GetScore().value().visitor, 10);
+            return matchId;
+        }));
     EXPECT_CALL(*messageProducerMock, SendMessage(testing::_, "tournament.score-registered"))
-        .Times(1);
+        .WillOnce(testing::Invoke([&tournamentId, &matchId](const std::string_view& message, const std::string_view& queue) {
+            // Validate event payload for maximum valid score
+            auto json = nlohmann::json::parse(message);
+            EXPECT_EQ(json["tournamentId"], tournamentId);
+            EXPECT_EQ(json["matchId"], matchId);
+            EXPECT_EQ(json["round"], "regular");
+            EXPECT_EQ(json["score"]["home"], 10);
+            EXPECT_EQ(json["score"]["visitor"], 10);
+            // Tie game - winnerId should be empty string
+            EXPECT_EQ(json["winnerId"], "");
+        }));
 
     auto result = matchDelegate->UpdateScore(tournamentId, matchId, maxScore);
 
@@ -461,9 +501,26 @@ TEST_F(MatchDelegateTest, UpdateScore_ZeroZeroTie_Succeeds) {
     EXPECT_CALL(*matchRepositoryMock, ReadById(matchId))
         .WillOnce(testing::Return(match));
     EXPECT_CALL(*matchRepositoryMock, Update(testing::_))
-        .WillOnce(testing::Return("match1"));
+        .WillOnce(testing::Invoke([&matchId](const domain::Match& updatedMatch) {
+            // Validate minimum valid score (0-0) is handled correctly
+            EXPECT_EQ(updatedMatch.Status(), "played");
+            EXPECT_TRUE(updatedMatch.GetScore().has_value());
+            EXPECT_EQ(updatedMatch.GetScore().value().home, 0);
+            EXPECT_EQ(updatedMatch.GetScore().value().visitor, 0);
+            return matchId;
+        }));
     EXPECT_CALL(*messageProducerMock, SendMessage(testing::_, "tournament.score-registered"))
-        .Times(1);
+        .WillOnce(testing::Invoke([&tournamentId, &matchId](const std::string_view& message, const std::string_view& queue) {
+            // Validate event payload for minimum valid score
+            auto json = nlohmann::json::parse(message);
+            EXPECT_EQ(json["tournamentId"], tournamentId);
+            EXPECT_EQ(json["matchId"], matchId);
+            EXPECT_EQ(json["round"], "regular");
+            EXPECT_EQ(json["score"]["home"], 0);
+            EXPECT_EQ(json["score"]["visitor"], 0);
+            // Tie game - winnerId should be empty string
+            EXPECT_EQ(json["winnerId"], "");
+        }));
 
     auto result = matchDelegate->UpdateScore(tournamentId, matchId, zeroScore);
 

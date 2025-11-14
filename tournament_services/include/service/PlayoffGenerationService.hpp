@@ -21,15 +21,17 @@
  * Service responsible for generating Single Elimination playoff brackets.
  *
  * Playoff Structure for Round Robin tournaments:
- * - Quarterfinals: Top 2 teams from each of 4 groups (8 teams total)
+ * - Quarterfinals: Top 8 teams from overall standings (1 group of 16 teams)
  * - Semifinals: Winners of quarterfinals (4 teams)
  * - Finals: Winners of semifinals (2 teams)
  *
  * Trigger: Generated when ALL group stage matches are completed (all have status "played")
  *
- * Seeding:
- * - Group winners (1st place) face group runners-up (2nd place)
- * - Example: Group A 1st vs Group D 2nd, Group B 1st vs Group C 2nd, etc.
+ * Seeding (based on overall ranking by wins → goal difference → goals scored):
+ * - QF1: 1st vs 8th
+ * - QF2: 4th vs 5th
+ * - QF3: 2nd vs 7th
+ * - QF4: 3rd vs 6th
  */
 class PlayoffGenerationService {
     std::shared_ptr<MatchRepository> matchRepository;
