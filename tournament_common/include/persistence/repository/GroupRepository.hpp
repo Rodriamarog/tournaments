@@ -161,9 +161,9 @@ inline std::vector<std::shared_ptr<domain::Group>> GroupRepository::FindByTourna
     auto connection = dynamic_cast<PostgresConnection*>(&*pooled);
 
     pqxx::work tx(*(connection->connection));
-    pqxx::result result = tx.exec_params(
+    pqxx::result result = tx.exec(
         "SELECT id, document FROM groups WHERE document->>'tournamentId' = $1",
-        tournamentId.data()
+        pqxx::params(tournamentId.data())
     );
     tx.commit();
 
@@ -185,10 +185,10 @@ inline void GroupRepository::UpdateGroupAddTeam(const std::string_view& groupId,
     domain::to_json(teamJson, team);
 
     pqxx::work tx(*(connection->connection));
-    tx.exec_params(
+    tx.exec(
         "UPDATE groups SET document = jsonb_set(document, '{teams}', "
         "COALESCE(document->'teams', '[]'::jsonb) || $1::jsonb) WHERE id = $2",
-        teamJson.dump(), groupId.data()
+        pqxx::params(teamJson.dump(), groupId.data())
     );
     tx.commit();
 }

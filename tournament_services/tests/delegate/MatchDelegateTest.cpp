@@ -420,3 +420,81 @@ TEST_F(MatchDelegateTest, UpdateScore_MatchNotFound_ReturnsError) {
     ASSERT_FALSE(result.has_value());
     EXPECT_EQ("Match doesn't exist", result.error());
 }
+
+// Test 13: UpdateScore accepts maximum valid score (10-10) in regular season
+TEST_F(MatchDelegateTest, UpdateScore_MaximumValidScore_Succeeds) {
+    std::string tournamentId = "tournament-123";
+    std::string matchId = "match1";
+    domain::Score maxScore(10, 10);  // Boundary value test
+
+    auto tournament = CreateTestTournament(tournamentId);
+    auto match = CreateTestMatch(matchId, tournamentId);  // Regular round match
+
+    EXPECT_CALL(*tournamentRepositoryMock, ReadById(tournamentId))
+        .WillOnce(testing::Return(tournament));
+    EXPECT_CALL(*matchRepositoryMock, ReadById(matchId))
+        .WillOnce(testing::Return(match));
+    EXPECT_CALL(*matchRepositoryMock, Update(testing::_))
+        .WillOnce(testing::Return("match1"));
+    EXPECT_CALL(*messageProducerMock, SendMessage(testing::_, "tournament.score-registered"))
+        .Times(1);
+
+    auto result = matchDelegate->UpdateScore(tournamentId, matchId, maxScore);
+
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ("played", match->Status());
+    EXPECT_EQ(10, match->GetScore().value().home);
+    EXPECT_EQ(10, match->GetScore().value().visitor);
+}
+
+// Test 14: UpdateScore accepts 0-0 tie in regular season
+TEST_F(MatchDelegateTest, UpdateScore_ZeroZeroTie_Succeeds) {
+    std::string tournamentId = "tournament-123";
+    std::string matchId = "match1";
+    domain::Score zeroScore(0, 0);  // Edge case: minimum valid tie
+
+    auto tournament = CreateTestTournament(tournamentId);
+    auto match = CreateTestMatch(matchId, tournamentId);  // Regular round match
+
+    EXPECT_CALL(*tournamentRepositoryMock, ReadById(tournamentId))
+        .WillOnce(testing::Return(tournament));
+    EXPECT_CALL(*matchRepositoryMock, ReadById(matchId))
+        .WillOnce(testing::Return(match));
+    EXPECT_CALL(*matchRepositoryMock, Update(testing::_))
+        .WillOnce(testing::Return("match1"));
+    EXPECT_CALL(*messageProducerMock, SendMessage(testing::_, "tournament.score-registered"))
+        .Times(1);
+
+    auto result = matchDelegate->UpdateScore(tournamentId, matchId, zeroScore);
+
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ("played", match->Status());
+    EXPECT_EQ(0, match->GetScore().value().home);
+    EXPECT_EQ(0, match->GetScore().value().visitor);
+}
+
+// Test 15: UpdateScore rejects score of 11 (just above boundary)
+TEST_F(MatchDelegateTest, UpdateScore_ElevenScore_ReturnsError) {
+    std::string tournamentId = "tournament-123";
+    std::string matchId = "match1";
+    domain::Score invalidScore(11, 5);  // Just above valid range
+
+    auto tournament = CreateTestTournament(tournamentId);
+    auto match = CreateTestMatch(matchId, tournamentId);
+
+    EXPECT_CALL(*tournamentRepositoryMock, ReadById(tournamentId))
+        .WillOnce(testing::Return(tournament));
+    EXPECT_CALL(*matchRepositoryMock, ReadById(matchId))
+        .WillOnce(testing::Return(match));
+
+    // Should not call Update or SendMessage
+    EXPECT_CALL(*matchRepositoryMock, Update(testing::_))
+        .Times(0);
+    EXPECT_CALL(*messageProducerMock, SendMessage(testing::_, testing::_))
+        .Times(0);
+
+    auto result = matchDelegate->UpdateScore(tournamentId, matchId, invalidScore);
+
+    ASSERT_FALSE(result.has_value());
+    EXPECT_EQ("Score must be between 0 and 10", result.error());
+}

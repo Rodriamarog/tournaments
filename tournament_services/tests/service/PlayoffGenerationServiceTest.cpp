@@ -67,6 +67,7 @@ protected:
     }
 
     // Helper to create a test tournament
+    // Default: 1 group of 16 teams (per Round Robin spec)
     std::shared_ptr<domain::Tournament> CreateTestTournament() {
         auto tournament = std::make_shared<domain::Tournament>();
         tournament->Id() = "tournament-1";
@@ -74,8 +75,8 @@ protected:
 
         domain::TournamentFormat format;
         format.Type() = domain::TournamentType::ROUND_ROBIN;
-        format.NumberOfGroups() = 4;
-        format.MaxTeamsPerGroup() = 4;
+        format.NumberOfGroups() = 1;  // Spec: 1 group of 16 teams
+        format.MaxTeamsPerGroup() = 16;
         tournament->Format() = format;
 
         return tournament;
@@ -515,5 +516,283 @@ TEST_F(PlayoffGenerationServiceTest, AdvanceWinners_NextRoundExists_ReturnsSucce
     auto result = service->AdvanceWinners("tournament-1", "quarterfinals");
 
     // Should return success without creating duplicates
+    EXPECT_TRUE(result.has_value());
+}
+
+// Test: Ranking - Teams with same wins, different goal differences
+TEST_F(PlayoffGenerationServiceTest, Ranking_SameWins_UseGoalDifference) {
+    auto tournament = CreateTestTournament();
+
+    // Create 1 group with 10 teams
+    auto group = std::make_shared<domain::Group>();
+    group->Id() = "main-group";
+    group->TournamentId() = "tournament-1";
+    group->Name() = "Group A";
+
+    std::vector<domain::Team> teams;
+    for (int i = 1; i <= 10; i++) {
+        domain::Team team;
+        team.Id = "team-" + std::to_string(i);
+        team.Name = "Team " + std::to_string(i);
+        teams.push_back(team);
+    }
+    group->Teams() = teams;
+
+    std::vector<std::shared_ptr<domain::Group>> groups = {group};
+
+    // Create matches where team-1 and team-2 both have 5 wins
+    // But team-1 has +20 GD (scored 25, conceded 5)
+    // And team-2 has +15 GD (scored 20, conceded 5)
+    std::vector<std::shared_ptr<domain::Match>> allMatches;
+
+    // Team-1: 5 wins with 5-1 scorelines (+20 GD)
+    for (int i = 3; i <= 7; i++) {
+        auto match = CreateTestMatch(
+            "m1-" + std::to_string(i),
+            "regular",
+            "played",
+            "team-1",
+            "team-" + std::to_string(i),
+            domain::Score{5, 1}
+        );
+        match->GroupId() = "main-group";
+        allMatches.push_back(match);
+    }
+
+    // Team-2: 5 wins with 4-1 scorelines (+15 GD)
+    for (int i = 3; i <= 7; i++) {
+        auto match = CreateTestMatch(
+            "m2-" + std::to_string(i),
+            "regular",
+            "played",
+            "team-2",
+            "team-" + std::to_string(i + 3 <= 10 ? i + 3 : i),
+            domain::Score{4, 1}
+        );
+        match->GroupId() = "main-group";
+        allMatches.push_back(match);
+    }
+
+    // Fill in some losses for other teams
+    for (int i = 3; i <= 10; i++) {
+        auto match = CreateTestMatch(
+            "m3-" + std::to_string(i),
+            "regular",
+            "played",
+            "team-" + std::to_string(i),
+            "team-1",
+            domain::Score{0, 1}
+        );
+        match->GroupId() = "main-group";
+        allMatches.push_back(match);
+    }
+
+    EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
+        .WillOnce(testing::Return(tournament));
+    EXPECT_CALL(*mockMatchRepo, FindByTournamentIdAndRound("tournament-1", "regular"))
+        .WillOnce(testing::Return(allMatches));
+    EXPECT_CALL(*mockMatchRepo, FindByTournamentIdAndRound("tournament-1", "quarterfinals"))
+        .WillOnce(testing::Return(std::vector<std::shared_ptr<domain::Match>>{}));
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentId("tournament-1"))
+        .WillOnce(testing::Return(groups));
+    EXPECT_CALL(*mockMatchRepo, FindByGroupId("main-group"))
+        .WillOnce(testing::Return(allMatches));
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "main-group"))
+        .WillOnce(testing::Return(group));
+
+    // Validate that team-1 (higher GD) is ranked higher than team-2
+    EXPECT_CALL(*mockMatchRepo, Create(testing::_))
+        .WillOnce(testing::Invoke([](const domain::Match& match) {
+            // First QF match should have team-1 (rank 1) vs team-8 (rank 8)
+            EXPECT_EQ(match.Home().id, "team-1");
+            return "qf1";
+        }))
+        .WillOnce(testing::Invoke([](const domain::Match& match) {
+            // Second QF match should have team-4 vs team-5
+            return "qf2";
+        }))
+        .WillOnce(testing::Invoke([](const domain::Match& match) {
+            // Third QF match should have team-2 (rank 2, lower GD) vs team-7
+            EXPECT_EQ(match.Home().id, "team-2");
+            return "qf3";
+        }))
+        .WillOnce(testing::Invoke([](const domain::Match& match) {
+            return "qf4";
+        }));
+
+    auto result = service->GenerateQuarterfinals("tournament-1");
+    EXPECT_TRUE(result.has_value());
+}
+
+// Test: Ranking - Teams with same wins and GD, different goals scored
+TEST_F(PlayoffGenerationServiceTest, Ranking_SameWinsAndGD_UseGoalsScored) {
+    auto tournament = CreateTestTournament();
+
+    auto group = std::make_shared<domain::Group>();
+    group->Id() = "main-group";
+    group->TournamentId() = "tournament-1";
+    group->Name() = "Group A";
+
+    std::vector<domain::Team> teams;
+    for (int i = 1; i <= 10; i++) {
+        domain::Team team;
+        team.Id = "team-" + std::to_string(i);
+        team.Name = "Team " + std::to_string(i);
+        teams.push_back(team);
+    }
+    group->Teams() = teams;
+
+    std::vector<std::shared_ptr<domain::Group>> groups = {group};
+
+    // Create matches where team-1 and team-2 both have:
+    // - 3 wins
+    // - +5 goal difference
+    // But team-1 scored 25 goals (25-20), team-2 scored 20 goals (20-15)
+    std::vector<std::shared_ptr<domain::Match>> allMatches;
+
+    // Team-1: 3 wins with high-scoring games (25 for, 20 against = +5 GD)
+    auto m1 = CreateTestMatch("m1-1", "regular", "played", "team-1", "team-3", domain::Score{10, 8});
+    m1->GroupId() = "main-group";
+    allMatches.push_back(m1);
+
+    auto m2 = CreateTestMatch("m1-2", "regular", "played", "team-1", "team-4", domain::Score{8, 6});
+    m2->GroupId() = "main-group";
+    allMatches.push_back(m2);
+
+    auto m3 = CreateTestMatch("m1-3", "regular", "played", "team-1", "team-5", domain::Score{7, 6});
+    m3->GroupId() = "main-group";
+    allMatches.push_back(m3);
+
+    // Team-2: 3 wins with lower-scoring games (20 for, 15 against = +5 GD)
+    auto m4 = CreateTestMatch("m2-1", "regular", "played", "team-2", "team-6", domain::Score{8, 5});
+    m4->GroupId() = "main-group";
+    allMatches.push_back(m4);
+
+    auto m5 = CreateTestMatch("m2-2", "regular", "played", "team-2", "team-7", domain::Score{7, 5});
+    m5->GroupId() = "main-group";
+    allMatches.push_back(m5);
+
+    auto m6 = CreateTestMatch("m2-3", "regular", "played", "team-2", "team-8", domain::Score{5, 5});
+    m6->GroupId() = "main-group";
+    allMatches.push_back(m6);
+
+    // Add enough other matches to fill out the standings
+    for (int i = 3; i <= 10; i++) {
+        auto match = CreateTestMatch(
+            "m-filler-" + std::to_string(i),
+            "regular",
+            "played",
+            "team-" + std::to_string(i),
+            "team-" + std::to_string((i % 10) + 1),
+            domain::Score{0, 1}
+        );
+        match->GroupId() = "main-group";
+        allMatches.push_back(match);
+    }
+
+    EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
+        .WillOnce(testing::Return(tournament));
+    EXPECT_CALL(*mockMatchRepo, FindByTournamentIdAndRound("tournament-1", "regular"))
+        .WillOnce(testing::Return(allMatches));
+    EXPECT_CALL(*mockMatchRepo, FindByTournamentIdAndRound("tournament-1", "quarterfinals"))
+        .WillOnce(testing::Return(std::vector<std::shared_ptr<domain::Match>>{}));
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentId("tournament-1"))
+        .WillOnce(testing::Return(groups));
+    EXPECT_CALL(*mockMatchRepo, FindByGroupId("main-group"))
+        .WillOnce(testing::Return(allMatches));
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "main-group"))
+        .WillOnce(testing::Return(group));
+
+    // Team-1 should rank higher due to more goals scored (25 > 20)
+    EXPECT_CALL(*mockMatchRepo, Create(testing::_))
+        .Times(4)
+        .WillRepeatedly(testing::Return("match-id"));
+
+    auto result = service->GenerateQuarterfinals("tournament-1");
+    EXPECT_TRUE(result.has_value());
+}
+
+// Test: Ranking - Complex standings with multiple tie-breaking scenarios
+TEST_F(PlayoffGenerationServiceTest, Ranking_ComplexStandings_CorrectTop8) {
+    auto tournament = CreateTestTournament();
+
+    auto group = std::make_shared<domain::Group>();
+    group->Id() = "main-group";
+    group->TournamentId() = "tournament-1";
+    group->Name() = "Group A";
+
+    // Create 16 teams
+    std::vector<domain::Team> teams;
+    for (int i = 1; i <= 16; i++) {
+        domain::Team team;
+        team.Id = "team-" + std::to_string(i);
+        team.Name = "Team " + std::to_string(i);
+        teams.push_back(team);
+    }
+    group->Teams() = teams;
+
+    std::vector<std::shared_ptr<domain::Group>> groups = {group};
+
+    // Create a full round-robin with predictable results
+    // Team i beats team j if i < j (lower number wins)
+    std::vector<std::shared_ptr<domain::Match>> allMatches;
+    int matchId = 1;
+
+    for (int i = 1; i <= 16; i++) {
+        for (int j = i + 1; j <= 16; j++) {
+            std::string home = "team-" + std::to_string(i);
+            std::string visitor = "team-" + std::to_string(j);
+
+            // Lower numbered team wins
+            auto match = CreateTestMatch(
+                "m" + std::to_string(matchId++),
+                "regular",
+                "played",
+                home,
+                visitor,
+                domain::Score{2, 1}
+            );
+            match->GroupId() = "main-group";
+            allMatches.push_back(match);
+        }
+    }
+
+    EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
+        .WillOnce(testing::Return(tournament));
+    EXPECT_CALL(*mockMatchRepo, FindByTournamentIdAndRound("tournament-1", "regular"))
+        .WillOnce(testing::Return(allMatches));
+    EXPECT_CALL(*mockMatchRepo, FindByTournamentIdAndRound("tournament-1", "quarterfinals"))
+        .WillOnce(testing::Return(std::vector<std::shared_ptr<domain::Match>>{}));
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentId("tournament-1"))
+        .WillOnce(testing::Return(groups));
+    EXPECT_CALL(*mockMatchRepo, FindByGroupId("main-group"))
+        .WillOnce(testing::Return(allMatches));
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "main-group"))
+        .WillOnce(testing::Return(group));
+
+    // Validate correct playoff seeding: 1v8, 4v5, 2v7, 3v6
+    EXPECT_CALL(*mockMatchRepo, Create(testing::_))
+        .WillOnce(testing::Invoke([](const domain::Match& match) {
+            EXPECT_EQ(match.Home().id, "team-1");
+            EXPECT_EQ(match.Visitor().id, "team-8");
+            return "qf1";
+        }))
+        .WillOnce(testing::Invoke([](const domain::Match& match) {
+            EXPECT_EQ(match.Home().id, "team-4");
+            EXPECT_EQ(match.Visitor().id, "team-5");
+            return "qf2";
+        }))
+        .WillOnce(testing::Invoke([](const domain::Match& match) {
+            EXPECT_EQ(match.Home().id, "team-2");
+            EXPECT_EQ(match.Visitor().id, "team-7");
+            return "qf3";
+        }))
+        .WillOnce(testing::Invoke([](const domain::Match& match) {
+            EXPECT_EQ(match.Home().id, "team-3");
+            EXPECT_EQ(match.Visitor().id, "team-6");
+            return "qf4";
+        }));
+
+    auto result = service->GenerateQuarterfinals("tournament-1");
     EXPECT_TRUE(result.has_value());
 }

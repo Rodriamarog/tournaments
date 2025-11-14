@@ -67,14 +67,15 @@ protected:
     }
 
     // Helper to create a tournament with specific format
-    std::shared_ptr<domain::Tournament> CreateTestTournament(int maxTeamsPerGroup) {
+    // Default: 1 group of 16 teams (per Round Robin spec)
+    std::shared_ptr<domain::Tournament> CreateTestTournament(int maxTeamsPerGroup = 16) {
         auto tournament = std::make_shared<domain::Tournament>();
         tournament->Id() = "tournament-1";
         tournament->Name() = "Test Tournament";
 
         domain::TournamentFormat format;
         format.Type() = domain::TournamentType::ROUND_ROBIN;
-        format.NumberOfGroups() = 4;
+        format.NumberOfGroups() = 1;  // Spec: 1 group of 16 teams
         format.MaxTeamsPerGroup() = maxTeamsPerGroup;
         tournament->Format() = format;
 
@@ -329,5 +330,62 @@ TEST_F(MatchGenerationServiceTest, GenerateRoundRobinMatches_ValidatesMatchStruc
         EXPECT_EQ(match.Round(), "regular");
         EXPECT_EQ(match.Status(), "pending");
         EXPECT_FALSE(match.GetScore().has_value());  // No score yet
+    }
+}
+
+// Test: GenerateRoundRobinMatches - 16 teams generates exactly 240 matches with complete home/away pairs
+TEST_F(MatchGenerationServiceTest, GenerateRoundRobinMatches_SixteenTeams_Generates240MatchesWithHomeAwayPairs) {
+    // This is the critical spec test: 1 group of 16 teams, double round-robin = 240 matches
+    auto tournament = CreateTestTournament(16);
+    auto group = CreateTestGroup("group-1", 16);
+
+    EXPECT_CALL(*mockTournamentRepo, ReadById("tournament-1"))
+        .WillOnce(testing::Return(tournament));
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "group-1"))
+        .WillOnce(testing::Return(group));
+    EXPECT_CALL(*mockMatchRepo, ExistsByGroupId("group-1"))
+        .WillOnce(testing::Return(false));
+
+    // Capture all created matches for validation
+    std::vector<domain::Match> createdMatches;
+    EXPECT_CALL(*mockMatchRepo, Create(testing::_))
+        .Times(240)  // 16 teams * 15 opponents = 240 matches
+        .WillRepeatedly([&createdMatches](const domain::Match& match) {
+            createdMatches.push_back(match);
+            return "match-id";
+        });
+
+    auto result = service->GenerateRoundRobinMatches("tournament-1", "group-1");
+
+    EXPECT_TRUE(result.has_value());
+    EXPECT_EQ(createdMatches.size(), 240);
+
+    // Validate each team pair appears exactly twice (home and away)
+    for (int i = 1; i <= 16; i++) {
+        for (int j = 1; j <= 16; j++) {
+            if (i == j) continue;  // Team doesn't play itself
+
+            std::string teamI = "team-" + std::to_string(i);
+            std::string teamJ = "team-" + std::to_string(j);
+
+            // Find match where teamI is home and teamJ is visitor
+            auto it = std::find_if(createdMatches.begin(), createdMatches.end(),
+                [&](const domain::Match& m) {
+                    return m.Home().id == teamI && m.Visitor().id == teamJ;
+                });
+
+            EXPECT_NE(it, createdMatches.end())
+                << "Missing match: " << teamI << " (home) vs " << teamJ << " (visitor)";
+        }
+    }
+
+    // Validate all matches have correct structure
+    for (const auto& match : createdMatches) {
+        EXPECT_EQ(match.TournamentId(), "tournament-1");
+        EXPECT_EQ(match.GroupId(), "group-1");
+        EXPECT_EQ(match.Round(), "regular");
+        EXPECT_EQ(match.Status(), "pending");
+        EXPECT_FALSE(match.GetScore().has_value());
+        EXPECT_NE(match.Home().id, match.Visitor().id);  // No team plays itself
     }
 }

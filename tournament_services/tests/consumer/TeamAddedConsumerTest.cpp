@@ -76,6 +76,7 @@ protected:
     }
 
     // Helper to create a tournament with specific format
+    // Default: 1 group of 16 teams (per Round Robin spec)
     std::shared_ptr<domain::Tournament> CreateTestTournament(int maxTeamsPerGroup) {
         auto tournament = std::make_shared<domain::Tournament>();
         tournament->Id() = "tournament-1";
@@ -83,7 +84,7 @@ protected:
 
         domain::TournamentFormat format;
         format.Type() = domain::TournamentType::ROUND_ROBIN;
-        format.NumberOfGroups() = 4;
+        format.NumberOfGroups() = 1;  // Spec: 1 group of 16 teams
         format.MaxTeamsPerGroup() = maxTeamsPerGroup;
         tournament->Format() = format;
 

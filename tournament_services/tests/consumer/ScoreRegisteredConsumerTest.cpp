@@ -73,6 +73,7 @@ protected:
     }
 
     // Helper to create a test tournament
+    // Default: 1 group of 16 teams (per Round Robin spec)
     std::shared_ptr<domain::Tournament> CreateTestTournament() {
         auto tournament = std::make_shared<domain::Tournament>();
         tournament->Id() = "tournament-1";
@@ -80,8 +81,8 @@ protected:
 
         domain::TournamentFormat format;
         format.Type() = domain::TournamentType::ROUND_ROBIN;
-        format.NumberOfGroups() = 4;
-        format.MaxTeamsPerGroup() = 4;
+        format.NumberOfGroups() = 1;  // Spec: 1 group of 16 teams
+        format.MaxTeamsPerGroup() = 16;
         tournament->Format() = format;
 
         return tournament;
@@ -157,11 +158,9 @@ TEST_F(ScoreRegisteredConsumerTest, ProcessEvent_LastRegularMatch_GeneratesQuart
 
     std::vector<std::shared_ptr<domain::Match>> noQuarterfinals;
 
+    // Spec: 1 group of 16 teams
     std::vector<std::shared_ptr<domain::Group>> groups = {
-        CreateTestGroup("A", 4),
-        CreateTestGroup("B", 4),
-        CreateTestGroup("C", 4),
-        CreateTestGroup("D", 4)
+        CreateTestGroup("main-group", 16)
     };
 
     nlohmann::json event = {
@@ -183,15 +182,9 @@ TEST_F(ScoreRegisteredConsumerTest, ProcessEvent_LastRegularMatch_GeneratesQuart
     EXPECT_CALL(*mockMatchRepo, FindByGroupId(testing::_))
         .WillRepeatedly(testing::Return(allPlayed));
 
-    // Mock FindByTournamentIdAndGroupId to return the groups (needed for team data)
-    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "A"))
+    // Mock FindByTournamentIdAndGroupId to return the single group (needed for team data)
+    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "main-group"))
         .WillOnce(testing::Return(groups[0]));
-    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "B"))
-        .WillOnce(testing::Return(groups[1]));
-    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "C"))
-        .WillOnce(testing::Return(groups[2]));
-    EXPECT_CALL(*mockGroupRepo, FindByTournamentIdAndGroupId("tournament-1", "D"))
-        .WillOnce(testing::Return(groups[3]));
 
     // Expect 4 quarterfinal matches created
     EXPECT_CALL(*mockMatchRepo, Create(testing::_))
